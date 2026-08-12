@@ -1,0 +1,41 @@
+---
+description: 中文注释规范：文件头与业务步骤注释
+globs: "**/*.py"
+alwaysApply: true
+---
+
+# 中文注释规范
+
+## 文件头
+
+- 每个 `.py` 文件第一行必须有**一行中文注释**，说明本文件职责。
+- 新建文件时先写文件头注释，再写代码。
+
+```python
+# 认证业务逻辑
+```
+
+## 业务代码
+
+- 写业务代码时，**每一步关键操作前加一行中文注释**（查库、校验、写库、调用外部服务、状态变更等）。
+- 注释写「做什么」，正常表达即可；不要复述代码字面意思。
+- 不要写说教式注释（如刻意强调 begin/commit/事务原理等），这类约定放在项目 rule，不塞进业务代码。
+- 简单赋值、无关紧要的胶水代码不必强行每行注释。
+
+```python
+# 校验用户是否存在
+user = user_repo.get_by_id(db, user_id)
+if not user:
+    raise exception(ErrorCode.ERR_ACCOUNT_NOT_FOUND)
+
+# 更新资料
+user_repo.update(db, user, patch)
+db.commit()
+```
+
+业务错误统一：`raise exception(ErrorCode.XXX)`，禁止手写散落的错误文案字符串。
+
+## 语言
+
+- 注释一律使用中文。
+- 标识符（函数名、变量名、类名）保持英文。

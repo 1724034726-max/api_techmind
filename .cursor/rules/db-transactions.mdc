@@ -1,0 +1,53 @@
+---
+description: SQLAlchemy 事务与写库约定（begin / commit / 唯一约束）
+globs: "app/**/*.py"
+alwaysApply: true
+---
+
+# 数据库事务约定
+
+FastAPI **不提供**事务；事务由 SQLAlchemy `Session` 管理。
+
+## 写库模式
+
+### 1. 纯写入（本请求尚未查库）
+
+用 `with db.begin():`，成功自动 `commit`，异常自动 `rollback`：
+
+```python
+try:
+    with db.begin():
+        user_repo.create(db, user)
+except IntegrityError as exc:
+    raise exception(ErrorCode.ERR_ACCOUNT_EXISTS, http_status=409) from exc
+```
+
+### 2. 先读后写（前面已 SELECT）
+
+Session 事务已开启，**不要再** `db.begin()`（会报错）。改字段后 `db.commit()`：
+
+```python
+user = user_repo.get_by_account(db, account)
+# ... 业务校验 ...
+user_repo.update_login_time(db, user)
+db.commit()
+db.refresh(user)
+```
+
+失败时由 `get_db` 依赖统一 `rollback`（服务层一般不必再手写 `rollback`，除非要继续用同一 Session）。
+
+## 唯一约束
+
+- 靠数据库 UNIQUE，不靠应用锁、不靠先查再插防并发。
+- 插入/更新撞唯一约束时：捕获 `IntegrityError`，转成对应 `ErrorCode`（如 `ERR_ACCOUNT_EXISTS`）。
+- 禁止把 `IntegrityError` 漏成 500。
+
+## 分层
+
+- **Repository**：只 `add` / `flush` / 查询，**不** `commit` / `begin`。
+- **Service**：负责事务边界（`begin` 或 `commit`）与业务异常映射。
+- **Controller**：不碰事务。
+
+## 依赖
+
+`get_db` 在请求异常退出时必须 `rollback`，并在 `finally` 里 `close`。

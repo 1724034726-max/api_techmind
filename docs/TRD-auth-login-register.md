@@ -90,6 +90,7 @@ Exception → ErrorCode → ApiResponse
 │     role         │ VARCHAR(16)   │ 身份：读者/作者/两者      │
 │     tags         │ JSONB         │ 兴趣标签列表              │
 │     bio          │ VARCHAR(160)  │ 个人简介                  │
+│     theme        │ VARCHAR(16)   │ 主题：light / dark        │
 │     followers_count │ INT        │ 粉丝数（冗余计数）        │
 │     following_count │ INT        │ 关注数（冗余计数）        │
 │     status       │ VARCHAR(16)   │ 账号状态：正常/禁用       │
@@ -121,6 +122,7 @@ Exception → ErrorCode → ApiResponse
 | `role` | `VARCHAR(16)` | NO | `'reader'` | 见枚举：`reader` / `author` / `both` |
 | `tags` | `JSONB` | NO | `'[]'` | 兴趣标签字符串数组，如 `["Java","Redis"]` |
 | `bio` | `VARCHAR(160)` | NO | `''` | 简介；空串允许，业务层可填默认文案 |
+| `theme` | `VARCHAR(16)` | NO | `'light'` | `light` / `dark`；账号级主题偏好 |
 | `followers_count` | `INT` | NO | `0` | 粉丝数冗余计数，本阶段只初始化 |
 | `following_count` | `INT` | NO | `0` | 关注数冗余计数，本阶段只初始化 |
 | `status` | `VARCHAR(16)` | NO | `'active'` | `active` / `disabled`；禁用账号禁止登录 |
@@ -180,6 +182,7 @@ CREATE INDEX idx_users_status ON users (status);
 |------|------|
 | `UserRole` | `reader`, `author`, `both` |
 | `UserStatus` | `active`, `disabled` |
+| `ThemePreference` | `light`, `dark` |
 
 ### 3.5 建表策略
 
@@ -370,6 +373,7 @@ Base：`/api/auth`
     "role": "reader",
     "tags": [],
     "bio": "...",
+    "theme": "light",
     "followers": 0,
     "following": 0,
     "status": "active",
@@ -380,7 +384,8 @@ Base：`/api/auth`
 ```
 
 > 对外 DTO 可用 `followers` / `following` 映射库字段 `followers_count` / `following_count`。  
-> **禁止**返回 `password` / `password_hash`。
+> **禁止**返回 `password` / `password_hash`。  
+> `theme` 默认 `light`；未登录前端固定浅色，不跟系统。
 
 ### 5.2 `POST /api/auth/login`
 
@@ -403,9 +408,25 @@ Base：`/api/auth`
 ### 5.3 `GET /api/auth/me`
 
 Header：`Authorization: Bearer <token>`  
-**Response 200**：`data` 为 `user` 对象（无 token 字段）。
+**Response 200**：`data` 为 `user` 对象（无 token 字段，含 `theme`）。
 
-### 5.4 错误码（复用 / 建议增补）
+### 5.4 `PATCH /api/users/me/theme`
+
+Header：`Authorization: Bearer <token>`
+
+**Request**
+
+```json
+{ "theme": "dark" }
+```
+
+| 字段 | 必填 | 校验 |
+|------|------|------|
+| `theme` | 是 | `light` \| `dark` |
+
+**Response 200**：`data` 为更新后的 `UserVO`。
+
+### 5.5 错误码（复用 / 建议增补）
 
 | ErrorCode | code | 场景 |
 |-----------|------|------|
@@ -428,20 +449,20 @@ Header：`Authorization: Bearer <token>`
 
 | 层级 | 文件 | 内容 |
 |------|------|------|
-| 常量 | `app/core/constants.py` | `UserRole` / `UserStatus` |
+| 常量 | `app/core/constants.py` | `UserRole` / `UserStatus` / `ThemePreference` |
 | 安全 | `app/core/security.py` | hash / verify / create_token / decode_token |
 | 敏感词 | `app/core/sensitive.py` | AC 自动机检测；`first_sensitive_in_tags` |
 | 词库 | `data/sensitive_words.txt` | 敏感词列表（运营可维护） |
 | 雪花 | `app/core/snowflake.py` | 雪花 ID 生成器（worker/datacenter 可配置） |
 | 配置 | `app/config.py` | `SECRET_KEY`、JWT 过期时间、算法、雪花 worker 配置 |
-| Model | `app/models/base.py`、`user.py` | Declarative Base + User（`id: BigInteger`） |
-| Schema | `app/schemas/auth.py`、`user.py` | Register/Login 入参、Token+User 出参（`id` 输出为 string） |
-| Repo | `app/repositories/user_repo.py` | get_by_id / get_by_username / get_by_email / create / update_login |
-| Service | `app/services/auth_service.py` | register（含敏感词）/ login / 组装 token 响应 |
+| Model | `app/models/base.py`、`user.py` | Declarative Base + User（含 `theme`） |
+| Schema | `app/schemas/auth.py`、`user.py` | Register/Login、`UpdateThemeDTO`、UserVO |
+| Repo | `app/repositories/user_repo.py` | create / update_login / update_theme … |
+| Service | `app/services/auth_service.py`、`user_service.py` | 认证；主题更新 |
 | Deps | `app/deps.py` | `get_db`、`get_current_user` |
-| Controller | `app/controllers/auth.py` | 路由定义 |
-| 入口 | `app/main.py` | `include_router(auth_router, prefix="/api/auth")` |
-| 迁移 | `migrations/` | 创建 `users` 表 |
+| Controller | `app/controllers/auth.py`、`users.py` | `/api/auth/*`、`PATCH /api/users/me/theme` |
+| 入口 | `app/main.py` | 挂载 auth / users 路由 |
+| 迁移 | `migrations/` | `users` 表；`0002` 增加 `theme` |
 
 ---
 

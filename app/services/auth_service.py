@@ -2,7 +2,7 @@
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.constants import DEFAULT_BIO, UserRole, UserStatus
+from app.core.constants import DEFAULT_BIO, ThemePreference, UserRole, UserStatus
 from app.core.error_codes import ErrorCode
 from app.core.exceptions import exception
 from app.core.security import create_access_token, hash_password, verify_password
@@ -53,6 +53,7 @@ def register(db: Session, payload: RegisterDTO) -> TokenVO:
         role=payload.role.value if isinstance(payload.role, UserRole) else payload.role,
         tags=tags,
         bio=bio,
+        theme=ThemePreference.LIGHT.value,
         followers_count=0,
         following_count=0,
         status=UserStatus.ACTIVE.value,

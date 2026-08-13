@@ -5,7 +5,7 @@ from sqlalchemy import BigInteger, CheckConstraint, DateTime, Index, Integer, St
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.constants import UserRole, UserStatus
+from app.core.constants import ThemePreference, UserRole, UserStatus
 from app.models.base import Base
 
 
@@ -16,6 +16,7 @@ class User(Base):
     __table_args__ = (
         CheckConstraint("role IN ('reader', 'author', 'both')", name="ck_users_role"),
         CheckConstraint("status IN ('active', 'disabled')", name="ck_users_status"),
+        CheckConstraint("theme IN ('light', 'dark')", name="ck_users_theme"),
         Index("idx_users_status", "status"),
     )
 
@@ -26,6 +27,12 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(16), nullable=False, default=UserRole.READER.value)
     tags: Mapped[list] = mapped_column(JSONB, nullable=False, server_default=text("'[]'::jsonb"))
     bio: Mapped[str] = mapped_column(String(160), nullable=False, default="", server_default="")
+    theme: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default=ThemePreference.LIGHT.value,
+        server_default=ThemePreference.LIGHT.value,
+    )
     followers_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     following_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     status: Mapped[str] = mapped_column(

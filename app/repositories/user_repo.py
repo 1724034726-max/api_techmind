@@ -45,3 +45,12 @@ def update_login_time(db: Session, user: User) -> User:
     user.updated_at = now
     db.flush()
     return user
+
+
+def update_theme(db: Session, user: User, theme: str) -> User:
+    # 更新主题偏好
+    now = datetime.now(timezone.utc)
+    user.theme = theme
+    user.updated_at = now
+    db.flush()
+    return user

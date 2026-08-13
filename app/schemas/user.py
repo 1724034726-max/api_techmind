@@ -3,7 +3,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
-from app.core.constants import UserRole, UserStatus
+from app.core.constants import ThemePreference, UserRole, UserStatus
 
 
 class UserVO(BaseModel):
@@ -17,6 +17,7 @@ class UserVO(BaseModel):
     role: UserRole
     tags: list[str] = Field(default_factory=list)
     bio: str
+    theme: ThemePreference = ThemePreference.LIGHT
     followers: int = Field(validation_alias="followers_count")
     following: int = Field(validation_alias="following_count")
     status: UserStatus
@@ -27,3 +28,9 @@ class UserVO(BaseModel):
     def serialize_id(self, value: int) -> str:
         # 雪花 ID 输出为字符串，避免前端精度丢失
         return str(value)
+
+
+class UpdateThemeDTO(BaseModel):
+    """更新账号主题偏好。"""
+
+    theme: ThemePreference

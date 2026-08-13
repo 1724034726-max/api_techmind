@@ -17,5 +17,12 @@ class UserStatus(str, Enum):
     DISABLED = "disabled"
 
 
+class ThemePreference(str, Enum):
+    """账号主题偏好（未登录前端固定 light）。"""
+
+    LIGHT = "light"
+    DARK = "dark"
+
+
 # 注册时简介缺省文案
 DEFAULT_BIO = "这位用户还没有填写简介"

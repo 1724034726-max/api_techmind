@@ -4,7 +4,8 @@
 |----|------|
 | 文档类型 | Technical Requirements Document |
 | 范围 | `techmind-api` 用户与认证子系统 |
-| 版本 | v0.2 |
+| 关联文档 | [TRD-architecture.md](./TRD-architecture.md)（整体架构与全局约定） |
+| 版本 | v0.4 |
 | 日期 | 2026-08-12 |
 | 状态 | Draft |
 
@@ -196,18 +197,45 @@ CREATE INDEX idx_users_status ON users (status);
 ### 4.1 注册
 
 1. 校验入参（长度、邮箱格式、密码 ≥ 8、`role` 枚举、`tags` 至少 1 个）。
-2. `email` 规范化为小写后查重；`username` 查重（建议大小写敏感存储、注册时禁止仅大小写不同的重复策略可后续收紧）。
-3. 若用户名或邮箱已存在 → `ErrorCode.ERR_ACCOUNT_EXISTS`。
+2. `email` 规范化为小写后写入；**不做先查再插**，唯一性交给表上 `username` / `email` UNIQUE。
+3. 清洗 `tags`（trim、去空串）；对每个标签做**敏感词检测**，命中 → `ERR_SENSITIVE_WORD`（HTTP 400），**不落库**。
 4. 对明文密码做哈希，写入 `password_hash`。
-5. `bio` 为空时写入默认文案：`这位用户还没有填写简介`（或存空串由展示层处理；**推荐服务端写默认文案** 保证库内可读）。
-6. `status=active`，计数为 0，写入 `created_at` / `updated_at`。
-7. 签发 JWT，返回 token + 用户公开信息（**注册即登录**）。
+5. `bio` 为空时写入默认文案：`这位用户还没有填写简介`。（本阶段 bio 可不做敏感词；后续可复用同一检测模块）
+6. `status=active`，计数为 0；主键由雪花算法生成。
+7. 落库成功后签发 JWT，返回 token + 用户公开信息（**注册即登录**）。
+8. 插入撞唯一约束 → 捕获 `IntegrityError` → `ErrorCode.ERR_ACCOUNT_EXISTS`（HTTP 409）。
+
+### 4.1.1 注册标签敏感词
+
+前端支持自定义标签，后端必须二次校验，不能只信前端。
+
+| 项 | 约定 |
+|----|------|
+| 算法 | AC 自动机（依赖 `pyahocorasick`） |
+| 实现 | `app/core/sensitive.py` |
+| 词库 | `data/sensitive_words.txt`（一行一词；`#` 行为注释） |
+| 覆盖类别 | 辱骂、歧视、政治敏感、色情、赌博/毒品、暴恐等（词库可运营维护） |
+| 策略 | **检测即拒绝**（不打码、不静默丢弃标签） |
+| 缓存 | 自动机进程内缓存；**改词库后需重启服务** |
+| 调用点 | `auth_service.register`，落库前 |
+
+失败响应示例：
+
+```json
+{
+  "code": "err21234339",
+  "message": "标签包含敏感词，请修改后重试",
+  "data": { "word": "赌博" }
+}
+```
+
+`data.word` 为命中词，便于联调；前端可只展示 `message`。
 
 ### 4.2 登录
 
 1. `account` trim 后按 **username 精确匹配或 email 小写匹配** 查用户。
 2. 不存在 → `ERR_ACCOUNT_NOT_FOUND`。
-3. `status != active` → 建议新增错误码或复用 `ERR_FORBIDDEN`（实现时补 `ERR_ACCOUNT_DISABLED` 更清晰）。
+3. `status != active` → `ERR_ACCOUNT_DISABLED`。
 4. 验密失败 → `ERR_PASSWORD_WRONG`。
 5. 成功：更新 `last_login_at`、`updated_at`；按统一过期时间签发 JWT。
 
@@ -237,7 +265,59 @@ CREATE INDEX idx_users_status ON users (status);
 1. 解析 Bearer；缺失/非法 → `ERR_UNAUTHORIZED` 或 `ERR_TOKEN_INVALID`。
 2. 过期 → `ERR_TOKEN_EXPIRED`。
 3. 按 `sub` 查库；用户不存在或已禁用 → `ERR_UNAUTHORIZED` / `ERR_FORBIDDEN`。
-4. 返回公开用户 DTO。
+4. 返回公开用户 VO（`UserVO`）。
+
+### 4.5 事务与并发
+
+FastAPI **不提供**事务；事务由 SQLAlchemy `Session` 管理。`get_db` 按请求创建 Session，异常退出时 `rollback`，结束时 `close`。
+
+#### 分层职责
+
+| 层 | 职责 |
+|----|------|
+| Repository | `add` / `flush` / 查询；**不** `commit` / `begin` |
+| Service | 事务边界与业务异常映射 |
+| Controller | 不碰事务 |
+
+#### 写库两种模式
+
+**1. 纯写入（本请求尚未查库）— 注册**
+
+使用 `with db.begin():`：块成功自动 `commit`，块内异常自动 `rollback` 后再抛出。
+
+```python
+try:
+    with db.begin():
+        user_repo.create(db, user)
+except IntegrityError as exc:
+    raise exception(ErrorCode.ERR_ACCOUNT_EXISTS, http_status=409) from exc
+```
+
+**2. 先读后写（前面已 SELECT）— 登录更新 `last_login_at`**
+
+Session 事务已因查询开启，**不可再** `db.begin()`。改字段后显式 `db.commit()`；若 `commit` 失败，由 `get_db` 兜底 `rollback`。
+
+```python
+user_repo.update_login_time(db, user)
+db.commit()
+db.refresh(user)
+```
+
+#### 唯一约束与并发
+
+- 防重复账号依赖 PostgreSQL UNIQUE（索引项冲突），不依赖应用层锁，也不依赖先查再插。
+- 并发双请求同注册：至多一条成功，另一条 `IntegrityError` → `ERR_ACCOUNT_EXISTS`。
+- 禁止将未处理的 `IntegrityError` 漏成 500。
+
+#### 幂等性说明（注册）
+
+| 能力 | 是否具备 |
+|------|----------|
+| 同一 username/email 不会插入两行 | 是（UNIQUE） |
+| 重复提交稳定返回同一次成功结果（同 token） | **否**（本阶段不做） |
+| 客户端超时重试：若首次已成功 | 重试得到 `ERR_ACCOUNT_EXISTS`，需前端按「已注册」处理或改走登录 |
+
+本阶段接受「冲突即业务错误」；若后续要强幂等，再引入幂等键 / request_id 或「已存在则直接登录」策略（另开需求）。
 
 ---
 
@@ -273,7 +353,7 @@ Base：`/api/auth`
 | email | 是 | Email |
 | password | 是 | ≥ 8 |
 | role | 否 | 默认 `reader` |
-| tags | 是* | 至少 1 个（*可默认空数组但业务层拒绝空） |
+| tags | 是* | 至少 1 个；支持自定义；后端敏感词检测，命中失败 |
 | bio | 否 | ≤ 80 或 ≤ 160（与列宽一致，建议请求 ≤ 80） |
 
 **Response 201** `data`：
@@ -337,7 +417,8 @@ Header：`Authorization: Bearer <token>`
 | `ERR_ACCOUNT_EXISTS` | `err21234335` | 注册冲突 |
 | `ERR_TOKEN_INVALID` | `err21234336` | token 非法 |
 | `ERR_TOKEN_EXPIRED` | `err21234337` | token 过期 |
-| `ERR_ACCOUNT_DISABLED`（建议新增） | `err21234338` | 账号已禁用 |
+| `ERR_ACCOUNT_DISABLED` | `err21234338` | 账号已禁用 |
+| `ERR_SENSITIVE_WORD` | `err21234339` | 标签含敏感词 |
 
 业务层统一：`raise exception(ErrorCode.XXX)`。
 
@@ -349,12 +430,14 @@ Header：`Authorization: Bearer <token>`
 |------|------|------|
 | 常量 | `app/core/constants.py` | `UserRole` / `UserStatus` |
 | 安全 | `app/core/security.py` | hash / verify / create_token / decode_token |
+| 敏感词 | `app/core/sensitive.py` | AC 自动机检测；`first_sensitive_in_tags` |
+| 词库 | `data/sensitive_words.txt` | 敏感词列表（运营可维护） |
 | 雪花 | `app/core/snowflake.py` | 雪花 ID 生成器（worker/datacenter 可配置） |
 | 配置 | `app/config.py` | `SECRET_KEY`、JWT 过期时间、算法、雪花 worker 配置 |
 | Model | `app/models/base.py`、`user.py` | Declarative Base + User（`id: BigInteger`） |
 | Schema | `app/schemas/auth.py`、`user.py` | Register/Login 入参、Token+User 出参（`id` 输出为 string） |
 | Repo | `app/repositories/user_repo.py` | get_by_id / get_by_username / get_by_email / create / update_login |
-| Service | `app/services/auth_service.py` | register / login / 组装 token 响应 |
+| Service | `app/services/auth_service.py` | register（含敏感词）/ login / 组装 token 响应 |
 | Deps | `app/deps.py` | `get_db`、`get_current_user` |
 | Controller | `app/controllers/auth.py` | 路由定义 |
 | 入口 | `app/main.py` | `include_router(auth_router, prefix="/api/auth")` |
@@ -378,9 +461,10 @@ Header：`Authorization: Bearer <token>`
 
 ## 8. 依赖增量
 
-- 密码哈希：`pwdlib[bcrypt]` 或 `passlib[bcrypt]`
+- 密码哈希：`bcrypt`
 - JWT：`PyJWT`
 - 迁移：`alembic`
+- 敏感词：`pyahocorasick`
 
 ---
 
@@ -393,6 +477,9 @@ Header：`Authorization: Bearer <token>`
 5. 所有接口响应为 `{code,message,data}`；业务错误只通过 `ErrorCode`。
 6. 响应体永不包含 `password` / `password_hash`。
 7. JWT 过期时间符合 `ACCESS_TOKEN_EXPIRE_MINUTES` 单一配置。
+8. 注册撞唯一约束返回 `err21234335`，不出现未处理的 500。
+9. 注册使用 `db.begin()`；登录更新登录时间使用先读后写 + `commit`。
+10. 注册 tags 命中敏感词返回 `err21234339`，且用户未入库；正常标签（如 `Java`）可注册成功。
 
 ---
 
@@ -401,7 +488,7 @@ Header：`Authorization: Bearer <token>`
 1. 配置 + `constants` + `security` + `snowflake`
 2. `User` Model（`BIGINT` PK）+ Alembic 迁移
 3. `user_repo` + schemas（`id` 序列化为 string）
-4. `auth_service` + `deps`
+4. `sensitive` + 词库 + `auth_service`（含标签敏感词）+ `deps`
 5. `auth` controller 挂载 + 自测（Swagger / curl）
 
 ---
@@ -414,5 +501,10 @@ Header：`Authorization: Bearer <token>`
 | 标签存储 | `JSONB` 数组，本阶段不拆表 |
 | Token | 仅 Access JWT，无 refresh 表 |
 | 时间对外格式 | ISO8601（Schema 层）；库内 `timestamptz` |
-| 禁用账号错误码 | 实现时新增 `ERR_ACCOUNT_DISABLED` |
+| 禁用账号错误码 | `ERR_ACCOUNT_DISABLED`（`err21234338`） |
+| 注册查重 | 不先查；UNIQUE + `IntegrityError` 映射 |
+| 注册幂等 | 仅防重复行；不做「重试同成功响应」 |
+| 自定义标签 | 允许；后端敏感词检测，命中拒绝 |
+| 敏感词策略 | AC + 本地词库；检测即报错，不打码 |
+| bio 敏感词 | 本阶段不做，后续复用 `sensitive` 模块 |
 | Demo 数据 | 本 TRD 不要求 seed |

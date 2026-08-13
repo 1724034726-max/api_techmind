@@ -6,6 +6,7 @@ from app.core.constants import DEFAULT_BIO, UserRole, UserStatus
 from app.core.error_codes import ErrorCode
 from app.core.exceptions import exception
 from app.core.security import create_access_token, hash_password, verify_password
+from app.core.sensitive import first_sensitive_in_tags
 from app.core.snowflake import next_id
 from app.models.user import User
 from app.repositories import user_repo
@@ -36,6 +37,12 @@ def register(db: Session, payload: RegisterDTO) -> TokenVO:
     # 规范化邮箱
     email = str(payload.email).lower()
 
+    # 清洗标签并做敏感词校验
+    tags = [t.strip() for t in payload.tags if t and t.strip()]
+    hit = first_sensitive_in_tags(tags)
+    if hit is not None:
+        raise exception(ErrorCode.ERR_SENSITIVE_WORD, http_status=400, detail={"word": hit})
+
     # 组装用户并落库
     bio = (payload.bio or "").strip() or DEFAULT_BIO
     user = User(
@@ -44,7 +51,7 @@ def register(db: Session, payload: RegisterDTO) -> TokenVO:
         email=email,
         password_hash=hash_password(payload.password),
         role=payload.role.value if isinstance(payload.role, UserRole) else payload.role,
-        tags=payload.tags,
+        tags=tags,
         bio=bio,
         followers_count=0,
         following_count=0,

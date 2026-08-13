@@ -20,6 +20,7 @@ class ErrorCode(Enum):
     ERR_TOKEN_INVALID = ("err21234336", "无效的访问令牌")
     ERR_TOKEN_EXPIRED = ("err21234337", "访问令牌已过期")
     ERR_ACCOUNT_DISABLED = ("err21234338", "账号已禁用")
+    ERR_SENSITIVE_WORD = ("err21234339", "标签包含敏感词，请修改后重试")
 
     def __init__(self, code: str, message: str) -> None:
         # 业务错误码字符串

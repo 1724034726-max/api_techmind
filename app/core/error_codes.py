@@ -22,6 +22,11 @@ class ErrorCode(Enum):
     ERR_ACCOUNT_DISABLED = ("err21234338", "账号已禁用")
     ERR_SENSITIVE_WORD = ("err21234339", "标签包含敏感词，请修改后重试")
 
+    # —— 文章 / 草稿 ——
+    ERR_ARTICLE_NOT_FOUND = ("err31200001", "文章不存在")
+    ERR_ARTICLE_NOT_AUTHOR = ("err31200004", "无权操作该文章")
+    ERR_ARTICLE_STATUS = ("err31200005", "当前状态不允许该操作")
+
     def __init__(self, code: str, message: str) -> None:
         # 业务错误码字符串
         self.code = code

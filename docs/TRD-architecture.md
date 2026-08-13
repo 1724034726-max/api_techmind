@@ -4,9 +4,9 @@
 |----|------|
 | 文档类型 | Technical Requirements Document |
 | 范围 | `techmind-api` 工程架构、分层、全局基建与跨模块约定 |
-| 关联文档 | [TRD-auth-login-register.md](./TRD-auth-login-register.md)（认证子系统） |
-| 版本 | v1.1 |
-| 日期 | 2026-08-12 |
+| 关联文档 | [TRD-auth-login-register.md](./TRD-auth-login-register.md)（认证）、[TRD-articles-editor.md](./TRD-articles-editor.md)（文章与写作） |
+| 版本 | v1.2 |
+| 日期 | 2026-08-13 |
 | 状态 | Draft |
 
 ---
@@ -32,8 +32,9 @@
 
 TechMind API 是「AI 驱动的技术内容社区」后端，对接 `techmind-web`（及后续客户端）。
 
-当前已落地：**认证（注册 / 登录 / me）**。  
-骨架已按业务域预留：文章、搜索、收藏、专栏、专题、图谱、流水线、运营台等（多数为空文件占位）。
+当前已落地：**认证（注册 / 登录 / me）**、用户主题偏好。  
+下一域设计见：**文章与写作** [TRD-articles-editor.md](./TRD-articles-editor.md)。  
+骨架已按业务域预留：搜索、收藏、专栏、专题、图谱、流水线、运营台等（多数为空文件占位）。
 
 ---
 
@@ -308,8 +309,8 @@ raise AppException(ErrorCode.ERR_PASSWORD_WRONG, http_status=400)
 | 用户 | `users` | 占位 |
 | 首页 Feed | `feed` | 占位 |
 | 搜索 | `search` | 占位 |
-| 文章 | `articles` | 占位 |
-| 写作 / 草稿 | `editor` | 占位 |
+| 文章 | `articles` | 设计中，见 [TRD-articles-editor.md](./TRD-articles-editor.md) |
+| 写作 / 草稿 | `editor` | AI 助手，见同一 TRD |
 | 发布流水线 | `pipeline` | 占位 |
 | 收藏 | `favorites` | 占位 |
 | 专栏 | `columns` | 占位 |
@@ -335,6 +336,7 @@ raise AppException(ErrorCode.ERR_PASSWORD_WRONG, http_status=400)
 |------|------|
 | 本文 | 全局架构与约定 |
 | `TRD-auth-login-register.md` | 认证表结构、接口、事务在认证中的落地 |
+| `TRD-articles-editor.md` | 文章 / 草稿 / 发布 / 写作 AI |
 | 后续 `TRD-*.md` | 按业务域增量 |
 
 ### 12.3 启动

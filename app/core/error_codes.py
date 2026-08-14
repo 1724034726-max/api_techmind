@@ -26,6 +26,7 @@ class ErrorCode(Enum):
     ERR_ARTICLE_NOT_FOUND = ("err31200001", "文章不存在")
     ERR_ARTICLE_NOT_AUTHOR = ("err31200004", "无权操作该文章")
     ERR_ARTICLE_STATUS = ("err31200005", "当前状态不允许该操作")
+    ERR_ARTICLE_SAVE_FAILED = ("err31200006", "文章保存失败，请稍后重试")
 
     def __init__(self, code: str, message: str) -> None:
         # 业务错误码字符串

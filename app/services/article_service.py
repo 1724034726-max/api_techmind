@@ -1,4 +1,5 @@
 # 文章 / 草稿业务逻辑（本迭代不含发布）
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.constants import (
@@ -70,8 +71,14 @@ def create_draft(db: Session, user: User, payload: CreateArticleDTO) -> ArticleV
         status=ArticleStatus.DRAFT.value,
         review_status=ReviewStatus.NONE.value,
     )
-    article_repo.create(db, article)
-    db.commit()
+    try:
+        article_repo.create(db, article)
+        db.commit()
+    except IntegrityError as exc:
+        # 约束冲突（如主键撞车、作者外键失效）
+        db.rollback()
+        raise exception(ErrorCode.ERR_ARTICLE_SAVE_FAILED, http_status=409) from exc
+
     db.refresh(article)
     return _to_vo(article, user.username)
 
@@ -104,10 +111,18 @@ def update_draft(
     if "cover_url" in data and data["cover_url"] is not None:
         article.cover_url = str(data["cover_url"]).strip()[:512]
 
-    article_repo.touch_updated(db, article)
-    db.commit()
-    db.refresh(article)
-    return _to_vo(article, user.username)
+    try:
+        article_repo.touch_updated(db, article)
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise exception(ErrorCode.ERR_ARTICLE_SAVE_FAILED, http_status=409) from exc
+
+    # 并发删除后行可能已不存在，避免 refresh 抛 500
+    fresh = article_repo.get_by_id(db, article_id)
+    if not fresh:
+        raise exception(ErrorCode.ERR_ARTICLE_NOT_FOUND, http_status=404)
+    return _to_vo(fresh, user.username)
 
 
 def get_draft(db: Session, user: User, article_id: int) -> ArticleVO:
@@ -146,5 +161,9 @@ def delete_draft(db: Session, user: User, article_id: int) -> None:
     article = _get_owned_draft(db, user, article_id)
 
     # 硬删草稿
-    article_repo.delete(db, article)
-    db.commit()
+    try:
+        article_repo.delete(db, article)
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise exception(ErrorCode.ERR_ARTICLE_SAVE_FAILED, http_status=409) from exc

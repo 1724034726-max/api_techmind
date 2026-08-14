@@ -32,6 +32,7 @@ class ErrorCode(Enum):
     ERR_AI_NOT_CONFIGURED = ("err41200001", "写作助手未配置，请联系管理员")
     ERR_AI_UPSTREAM = ("err41200002", "写作助手暂时不可用，请稍后重试")
     ERR_AI_BAD_RESPONSE = ("err41200003", "写作助手返回格式异常，请重试")
+    ERR_AI_RATE_LIMITED = ("err41200004", "写作助手调用过于频繁，请稍后再试")
 
     def __init__(self, code: str, message: str) -> None:
         # 业务错误码字符串

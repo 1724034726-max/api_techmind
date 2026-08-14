@@ -3,11 +3,11 @@
 | 项 | 内容 |
 |----|------|
 | 文档类型 | Technical Requirements Document |
-| 范围 | `techmind-api` 文章主数据、作者草稿 CRUD、发布、写作助手 AI 接口（可先 mock） |
+| 范围 | `techmind-api` 文章主数据、作者草稿 CRUD、发布、写作助手 AI（火山方舟：选题/扩写 SSE；润色 JSON） |
 | 关联文档 | [TRD-architecture.md](./TRD-architecture.md)；前端 [techmind-web/docs/TRD-frontend-editor.md](../../techmind-web/docs/TRD-frontend-editor.md) |
-| 版本 | v0.2 |
-| 日期 | 2026-08-13 |
-| 状态 | Draft（草稿 CRUD 已落地；写作 AI 已接火山方舟；发布未做） |
+| 版本 | v0.3 |
+| 日期 | 2026-08-14 |
+| 状态 | Draft（草稿 CRUD + 写作 AI 双模式已落地；发布未做） |
 
 > 全局响应信封、`ErrorCode`、JWT、雪花 ID、分层约定见架构 TRD。  
 > 本文与前端编辑器 TRD 对齐：**正文唯一源格式为 Markdown（`content_md`）**；不存 HTML 为主源。
@@ -21,22 +21,23 @@
 1. 作者可创建 / 更新 / 列表 / 删除**自己的草稿**。
 2. 作者可**发布**文章：元数据（专栏、分类、标签、封面、导读）+ Markdown 正文；导读为空时**服务端自动生成**。
 3. 读者可按 id 拉取**已发布**文章详情（供详情页渲染 MD）。
-4. 提供写作助手 HTTP 接口（选题分析 / 扩写 / 导读 / 开头），首版可返回规则化 mock，契约稳定后再接 LLM。
+4. 提供写作助手接口（选题分析 / 扩写 / 导读 / 开头）：**火山方舟 Chat**；选题/扩写为 **SSE**（`delta` → `done` / `error`），导读/开头为 **一次性 JSON**（`ApiResponse`）。
 5. 敏感词检测复用 `app/core/sensitive.py`（标题、标签、导读、正文可配置接入）。
 
 ### 1.2 非目标（本迭代）
 
 - **发布**（`POST .../publish`）、定时发布、审核流水线
-- **写作 AI**（`/api/editor/ai/*`）
+- 向量 Embedding / 语义检索
 - 版本历史表、协作编辑、富文本 / MDX
 - 专栏 / 分类独立 CRUD 完整化
 - 图片上传 OSS
 
-> 当前已实现：**草稿**创建 / 更新 / 我的列表 / 详情 / 删除。
+> 当前已实现：**草稿**创建 / 更新 / 我的列表 / 详情 / 删除；**写作 AI** 选题/扩写 SSE + 润色 JSON。
 
 ### 1.3 技术前提
 
-与架构 TRD 一致：FastAPI + SQLAlchemy 2 + PostgreSQL + Alembic + JWT Bearer + 雪花 ID。
+与架构 TRD 一致：FastAPI + SQLAlchemy 2 + PostgreSQL + Alembic + JWT Bearer + 雪花 ID。  
+LLM：火山方舟 OpenAI 兼容 `chat/completions`（`app/integrations/ark`）。
 
 ---
 
@@ -294,17 +295,51 @@ Body 同创建（全量或部分：建议 **PATCH 可选字段**）。
 - `draft`：硬删。  
 - `published`：本迭代改为 `archived`（推荐）或拒绝删除。
 
-### 5.7 写作 AI（`/api/editor`）
+### 5.7 写作 AI（`/api/editor`，双模式）
 
 均需登录；**不强制**改文章，由前端决定是否写入编辑器。
 
+| 任务 | 传输 | 说明 |
+|------|------|------|
+| `topic-analyze` / `expand` | SSE | `delta` 流式 MD + `done` 结构化 VO |
+| `summary` / `opening` | JSON | 标准 `ApiResponse`，无 `delta` |
+
+#### SSE（选题 / 扩写）
+
+| 项 | 约定 |
+|----|------|
+| 协议 | `POST` + `Content-Type: application/json` 请求体；响应 `Content-Type: text/event-stream` |
+| 鉴权 | Bearer；鉴权失败时仍可能返回**普通 JSON 信封**（非 SSE），由前端按 `apiFetch` 规则处理 |
+| 上游 | 火山方舟 `chat/completions`，`stream: true`；客户端 `app/integrations/ark` |
+| 未配置 | 流内 `event: error`，`code=err41200001`（`ERR_AI_NOT_CONFIGURED`）；或启动前校验失败同码 |
+| 缓冲 | 响应头建议：`Cache-Control: no-cache`、`Connection: keep-alive`、`X-Accel-Buffering: no` |
+
+| event | data（JSON） | 说明 |
+|-------|--------------|------|
+| `delta` | `{ "text": "<Markdown 增量>" }` | 模型 token / 片段，可多次 |
+| `done` | 对应任务的 VO（见下） | 服务端按约定 MD 结构解析后返回 |
+| `error` | `{ "code": "err…", "message": "…" }` | 上游失败 / 解析失败等 |
+
+帧格式：`event: …\ndata: …\n\n`（`app/core/sse.py`）。
+
+#### JSON（导读 / 开头）
+
+| 项 | 约定 |
+|----|------|
+| 协议 | `POST` + JSON 请求体；响应 `ApiResponse[VO]` |
+| 上游 | 方舟非流式 `chat`（或流式聚合后一次返回） |
+| 失败 | 全局 JSON 异常 / 业务错误码（同其它 REST） |
+
 #### `POST /api/editor/ai/topic-analyze`
+
+请求：
 
 ```json
 { "keyword": "JVM" }
 ```
 
-**Response `data`**
+流式：`delta` 为模型原始输出增量。  
+`done.data`：
 
 ```json
 {
@@ -322,29 +357,47 @@ Body 同创建（全量或部分：建议 **PATCH 可选字段**）。
 
 #### `POST /api/editor/ai/expand`
 
+请求：
+
 ```json
 { "content_md": "...", "title": "..." }
 ```
 
-**Response**：`{ "appendix_md": "## AI 扩写初稿\n\n..." }`（前端预览后追加）。
+流式：`delta` 为模型输出的 Markdown 增量。  
+`done.data`：`{ "appendix_md": "..." }`。若模型仍返回 JSON，返回 `ERR_AI_BAD_RESPONSE`。
 
 #### `POST /api/editor/ai/summary`
 
+请求：
+
 ```json
 { "title": "...", "content_md": "..." }
 ```
 
-**Response**：`{ "candidates": [ { "label": "问题导向", "text": "..." } ] }`（前端选用写入导读）。
+响应：`ApiResponse`，`data`：`{ "candidates": [ { "label": "问题导向", "text": "..." } ] }`。
 
 #### `POST /api/editor/ai/opening`
 
+请求：
+
 ```json
 { "title": "...", "content_md": "..." }
 ```
 
-**Response**：`{ "candidates": [ { "label": "场景切入", "text": "..." } ] }`。
+响应：`ApiResponse`，`data`：`{ "candidates": [ { "label": "场景切入", "text": "..." } ] }`。
 
-> 首版实现：走火山方舟 Chat（`app/integrations/ark`，与 my-grad-pro-back 同源）；未配置 `ARK_API_KEY` 时返回 `ERR_AI_NOT_CONFIGURED`。
+#### 相关配置
+
+| 变量 | 说明 |
+|------|------|
+| `ARK_API_KEY` | 方舟密钥；空则 AI 不可用 |
+| `ARK_BASE_URL` | 默认 `https://ark.cn-beijing.volces.com` |
+| `ARK_CHAT_MODEL` | Chat 模型 id |
+| `ARK_CHAT_COMPLETIONS_URL` | 可选；覆盖默认 completions 路径 |
+
+限流：每用户约 **8 次 / 60s**（进程内内存计数，`ERR_AI_RATE_LIMITED`）；客户端断开 SSE 时会 `cancel` 停止方舟拉取。
+
+实现：`editor_ai_service` 固定 system prompt + MD 结构解析；选题/扩写走 SSE；导读/开头同步聚合后解析。
 
 ### 5.8 `ArticleVO`（对外）
 
@@ -381,12 +434,19 @@ Body 同创建（全量或部分：建议 **PATCH 可选字段**）。
 | `ERR_ARTICLE_CONTENT_REQUIRED` | `err31200003` | 发布前请填写正文 |
 | `ERR_ARTICLE_NOT_AUTHOR` | `err31200004` | 无权操作该文章 |
 | `ERR_ARTICLE_STATUS` | `err31200005` | 当前状态不允许该操作 |
+| `ERR_ARTICLE_SAVE_FAILED` | `err31200006` | 文章保存失败，请稍后重试 |
+| `ERR_AI_NOT_CONFIGURED` | `err41200001` | 写作助手未配置，请联系管理员 |
+| `ERR_AI_UPSTREAM` | `err41200002` | 写作助手暂时不可用，请稍后重试 |
+| `ERR_AI_BAD_RESPONSE` | `err41200003` | 写作助手返回格式异常，请重试 |
 
-通用：`ERR_UNAUTHORIZED` / `ERR_FORBIDDEN` / `ERR_SENSITIVE_WORD` / `ERR_VALIDATION`。
+通用：`ERR_UNAUTHORIZED` / `ERR_FORBIDDEN` / `ERR_SENSITIVE_WORD` / `ERR_VALIDATION`；  
+鉴权另见 `ERR_TOKEN_EXPIRED`（`err21234337`）/ `ERR_TOKEN_INVALID`（`err21234336`）。
+
+> 写作 AI 在 **SSE 已开始** 后的业务失败走 `event: error`（HTTP 多为 200 + 流内错误码）；流开始前的鉴权失败仍走全局 JSON 异常过滤器。
 
 ---
 
-## 6. 模块落地（拟）
+## 6. 模块落地
 
 | 层 | 路径 |
 |----|------|
@@ -395,6 +455,8 @@ Body 同创建（全量或部分：建议 **PATCH 可选字段**）。
 | Repo | `app/repositories/article_repo.py` |
 | Service | `app/services/article_service.py`、`app/services/editor_ai_service.py` |
 | Controller | `app/controllers/articles.py`、`app/controllers/editor.py` |
+| 集成 | `app/integrations/ark/chat.py`（同步 + stream） |
+| SSE | `app/core/sse.py` |
 | 常量 | `ArticleStatus` / `ReviewStatus` → `constants.py` |
 | 迁移 | `migrations/versions/0003_add_articles.py`（序号以仓库现状为准） |
 
@@ -408,14 +470,12 @@ Body 同创建（全量或部分：建议 **PATCH 可选字段**）。
 
 | 前端（编辑器 TRD） | 后端 |
 |--------------------|------|
-| 本地多草稿 `tm_drafts` | 迁云后：`GET/POST/PATCH /api/articles`，`status=draft` |
-| 导读空则发布时生成 | **服务端必须再兜底一遍**（防绕过） |
+| 服务端草稿 | `GET/POST/PATCH/DELETE /api/articles`，`status=draft` |
+| 导读空则发布时生成 | **服务端必须再兜底一遍**（防绕过；发布未做） |
 | 正文 MD | `content_md` |
-| AI mock | `/api/editor/ai/*` |
-| 发布经 Sheet | `POST /api/articles/{id}/publish` |
+| AI | 选题/扩写 SSE → `apiSseFetch`；润色 JSON → `apiFetch` |
+| 发布经 Sheet | `POST /api/articles/{id}/publish`（未做） |
 | 详情渲染 MD | `GET /api/articles/{id}` → 前端 `react-markdown` |
-
-前端首版可继续本地草稿；联调本 TRD 接口时再切 `draft-store` 为 API。
 
 ---
 
@@ -426,11 +486,11 @@ Body 同创建（全量或部分：建议 **PATCH 可选字段**）。
 | 1 | 迁移后 `articles` 表存在，CHECK / 索引齐全 |
 | 2 | 作者可建草稿、更新、列表、删除；读者角色创建失败 |
 | 3 | 非作者不可读他人草稿（表现为不存在或无权限） |
-| 4 | 发布：无标题失败；无摘要自动生成并落库；`status=published` |
-| 5 | 已发布详情返回 `content_md`；id 为字符串 |
-| 6 | AI 四个接口契约稳定，可 mock |
+| 4 | 发布：无标题失败；无摘要自动生成并落库；`status=published`（待做） |
+| 5 | 已发布详情返回 `content_md`；id 为字符串（待发布后） |
+| 6 | AI：选题/扩写 SSE；导读/开头一次性 JSON；配置 Key 后可联调方舟 |
 | 7 | 敏感词命中返回既有/扩展错误码 |
-| 8 | 响应均为 `ApiResponse`，失败不 200 包业务成功 |
+| 8 | 非流式接口响应均为 `ApiResponse`；SSE 业务失败在流内 `error` |
 
 ---
 
@@ -440,8 +500,8 @@ Body 同创建（全量或部分：建议 **PATCH 可选字段**）。
 2. Repo + Service：草稿 CRUD  
 3. `publish` + 空摘要生成 + 敏感词  
 4. 公开详情 + mine 列表  
-5. `editor` AI mock 四接口  
-6. 与 `techmind-web` 联调替换本地草稿  
+5. `editor` AI：Ark + 选题/扩写 SSE + 润色 JSON  
+6. 与 `techmind-web` 联调（草稿已切 API；AI 双模式）  
 
 ---
 
@@ -453,5 +513,6 @@ Body 同创建（全量或部分：建议 **PATCH 可选字段**）。
 | 已发布是否允许改正文 | 允许（简单）；若要审核回流再改 |
 | 专栏 | 先 `column_name` 字符串 |
 | 列表是否返回全文 | 否，仅详情 |
+| AI 传输模式 | 选题/扩写 SSE；导读/开头一次性 JSON |
 
-修订时同步前端编辑器 TRD「接 API」小节。
+修订时同步前端编辑器 TRD。

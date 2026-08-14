@@ -1,6 +1,10 @@
 # 写作助手 AI 请求 / 响应 Schema
 from pydantic import BaseModel, Field
 
+# 与服务端截断策略对齐的正文上限
+CONTENT_MD_MAX = 12000
+TITLE_MAX = 200
+
 
 class TopicAnalyzeDTO(BaseModel):
     keyword: str = Field(min_length=1, max_length=64)
@@ -19,8 +23,8 @@ class TopicAnalyzeVO(BaseModel):
 
 
 class ExpandDTO(BaseModel):
-    title: str = ""
-    content_md: str = ""
+    title: str = Field(default="", max_length=TITLE_MAX)
+    content_md: str = Field(default="", max_length=CONTENT_MD_MAX)
 
 
 class ExpandVO(BaseModel):
@@ -28,8 +32,8 @@ class ExpandVO(BaseModel):
 
 
 class SummaryDTO(BaseModel):
-    title: str = ""
-    content_md: str = ""
+    title: str = Field(default="", max_length=TITLE_MAX)
+    content_md: str = Field(default="", max_length=CONTENT_MD_MAX)
 
 
 class TextCandidateVO(BaseModel):
@@ -42,8 +46,8 @@ class SummaryVO(BaseModel):
 
 
 class OpeningDTO(BaseModel):
-    title: str = ""
-    content_md: str = ""
+    title: str = Field(default="", max_length=TITLE_MAX)
+    content_md: str = Field(default="", max_length=CONTENT_MD_MAX)
 
 
 class OpeningVO(BaseModel):

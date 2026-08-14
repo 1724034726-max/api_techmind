@@ -5,8 +5,8 @@
 | 文档类型 | Technical Requirements Document |
 | 范围 | `techmind-api` 工程架构、分层、全局基建与跨模块约定 |
 | 关联文档 | [TRD-auth-login-register.md](./TRD-auth-login-register.md)（认证）、[TRD-articles-editor.md](./TRD-articles-editor.md)（文章与写作） |
-| 版本 | v1.2 |
-| 日期 | 2026-08-13 |
+| 版本 | v1.3 |
+| 日期 | 2026-08-14 |
 | 状态 | Draft |
 
 ---
@@ -24,7 +24,7 @@
 - 主键（雪花）、鉴权基建、迁移
 - 命名与工程约定
 
-不包含：具体业务接口细节（由各专题 TRD 展开，如认证 TRD）。
+不包含：具体业务接口细节（由各专题 TRD 展开，如认证、文章与写作）。
 
 ---
 
@@ -32,8 +32,8 @@
 
 TechMind API 是「AI 驱动的技术内容社区」后端，对接 `techmind-web`（及后续客户端）。
 
-当前已落地：**认证（注册 / 登录 / me）**、用户主题偏好。  
-下一域设计见：**文章与写作** [TRD-articles-editor.md](./TRD-articles-editor.md)。  
+当前已落地：**认证（注册 / 登录 / me）**、用户主题偏好、**文章草稿 CRUD**、**写作助手 AI（方舟 + SSE）**。  
+详设见：[TRD-auth-login-register.md](./TRD-auth-login-register.md)、[TRD-articles-editor.md](./TRD-articles-editor.md)。  
 骨架已按业务域预留：搜索、收藏、专栏、专题、图谱、流水线、运营台等（多数为空文件占位）。
 
 ---
@@ -221,8 +221,12 @@ raise AppException(ErrorCode.ERR_PASSWORD_WRONG, http_status=400)
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Access Token 过期（分钟） |
 | `SNOWFLAKE_WORKER_ID` | 雪花机器号 |
 | `SNOWFLAKE_DATACENTER_ID` | 雪花数据中心号 |
+| `ARK_API_KEY` | 火山方舟密钥（写作 AI）；空则 AI 不可用 |
+| `ARK_BASE_URL` | 方舟 API 根；默认北京区 |
+| `ARK_CHAT_MODEL` | Chat 模型 id |
+| `ARK_CHAT_COMPLETIONS_URL` | 可选；覆盖 completions 完整 URL |
 
-通过 `get_settings()`（`lru_cache`）读取。
+通过 `get_settings()`（`lru_cache`）读取。写作 AI 细节见 [TRD-articles-editor.md](./TRD-articles-editor.md) §5.7。
 
 ### 8.2 CORS
 
@@ -306,11 +310,11 @@ raise AppException(ErrorCode.ERR_PASSWORD_WRONG, http_status=400)
 | 域 | Controller | 状态（写作时） |
 |----|------------|----------------|
 | 认证 | `auth` | 已实现 |
-| 用户 | `users` | 占位 |
+| 用户 | `users` | 主题等已实现；其余可扩展 |
 | 首页 Feed | `feed` | 占位 |
 | 搜索 | `search` | 占位 |
-| 文章 | `articles` | 设计中，见 [TRD-articles-editor.md](./TRD-articles-editor.md) |
-| 写作 / 草稿 | `editor` | AI 助手，见同一 TRD |
+| 文章 | `articles` | 草稿 CRUD 已实现；发布待做，见 [TRD-articles-editor.md](./TRD-articles-editor.md) |
+| 写作助手 | `editor` | AI SSE 四接口已实现，见同一 TRD |
 | 发布流水线 | `pipeline` | 占位 |
 | 收藏 | `favorites` | 占位 |
 | 专栏 | `columns` | 占位 |

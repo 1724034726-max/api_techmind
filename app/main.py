@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.controllers.articles import router as articles_router
 from app.controllers.auth import router as auth_router
+from app.controllers.editor import router as editor_router
 from app.controllers.users import router as users_router
 from app.core.exception_handlers import register_exception_handlers
 
@@ -23,7 +24,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 挂载认证 / 用户 / 文章草稿路由
+# 挂载认证 / 用户 / 文章草稿 / 写作助手
 app.include_router(auth_router, prefix="/api/auth")
 app.include_router(users_router, prefix="/api/users")
 app.include_router(articles_router, prefix="/api/articles")
+app.include_router(editor_router, prefix="/api/editor")

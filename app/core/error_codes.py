@@ -28,6 +28,11 @@ class ErrorCode(Enum):
     ERR_ARTICLE_STATUS = ("err31200005", "当前状态不允许该操作")
     ERR_ARTICLE_SAVE_FAILED = ("err31200006", "文章保存失败，请稍后重试")
 
+    # —— 写作 AI ——
+    ERR_AI_NOT_CONFIGURED = ("err41200001", "写作助手未配置，请联系管理员")
+    ERR_AI_UPSTREAM = ("err41200002", "写作助手暂时不可用，请稍后重试")
+    ERR_AI_BAD_RESPONSE = ("err41200003", "写作助手返回格式异常，请重试")
+
     def __init__(self, code: str, message: str) -> None:
         # 业务错误码字符串
         self.code = code

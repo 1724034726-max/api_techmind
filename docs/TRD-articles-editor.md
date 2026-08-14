@@ -7,7 +7,7 @@
 | 关联文档 | [TRD-architecture.md](./TRD-architecture.md)；前端 [techmind-web/docs/TRD-frontend-editor.md](../../techmind-web/docs/TRD-frontend-editor.md) |
 | 版本 | v0.2 |
 | 日期 | 2026-08-13 |
-| 状态 | Draft（草稿 CRUD 已对齐实现；发布 / AI 未做） |
+| 状态 | Draft（草稿 CRUD 已落地；写作 AI 已接火山方舟；发布未做） |
 
 > 全局响应信封、`ErrorCode`、JWT、雪花 ID、分层约定见架构 TRD。  
 > 本文与前端编辑器 TRD 对齐：**正文唯一源格式为 Markdown（`content_md`）**；不存 HTML 为主源。
@@ -344,7 +344,7 @@ Body 同创建（全量或部分：建议 **PATCH 可选字段**）。
 
 **Response**：`{ "candidates": [ { "label": "场景切入", "text": "..." } ] }`。
 
-> 首版实现：`editor_ai_service` 内规则 / 模板即可；切换 LLM 不改 URL。
+> 首版实现：走火山方舟 Chat（`app/integrations/ark`，与 my-grad-pro-back 同源）；未配置 `ARK_API_KEY` 时返回 `ERR_AI_NOT_CONFIGURED`。
 
 ### 5.8 `ArticleVO`（对外）
 

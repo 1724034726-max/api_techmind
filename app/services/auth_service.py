@@ -37,14 +37,14 @@ def register(db: Session, payload: RegisterDTO) -> TokenVO:
     # 规范化邮箱
     email = str(payload.email).lower()
 
-    # 清洗标签并做敏感词校验
-    tags = [t.strip() for t in payload.tags if t and t.strip()]
+    # 敏感词校验
+    tags = list(payload.tags)
     hit = first_sensitive_in_tags(tags)
     if hit is not None:
         raise exception(ErrorCode.ERR_SENSITIVE_WORD, http_status=400, detail={"word": hit})
 
     # 组装用户并落库
-    bio = (payload.bio or "").strip() or DEFAULT_BIO
+    bio = payload.bio or DEFAULT_BIO
     user = User(
         id=next_id(),
         username=payload.username,

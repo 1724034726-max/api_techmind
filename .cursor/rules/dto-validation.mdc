@@ -1,0 +1,61 @@
+---
+description: 入参 DTO 校验规范（长度、枚举、禁止 Service 静默截断）
+globs: "app/schemas/**/*.py,app/services/**/*.py"
+alwaysApply: true
+---
+
+# 入参 DTO 校验规范
+
+## 原则
+
+- **长度、格式、枚举、列表个数** 等入参约束写在 **DTO（`app/schemas`）**，用 Pydantic `Field` / `field_validator`。
+- 校验失败由全局异常过滤器返回 `ERR_VALIDATION`（422），**不要**在 Service 里静默 `[:n]` 截断后入库。
+- Service 只做业务规则（权限、归属、敏感词、状态机、落库事务等）。
+
+## DTO 应写明
+
+| 类型 | 示例 |
+|------|------|
+| 字符串长度 | `Field(max_length=200)`，必要时 `min_length` |
+| 列表个数 | `Field(max_length=8)` |
+| 列表元素 | `Annotated[str, Field(max_length=32)]` |
+| 去空白 | `field_validator(..., mode="before")` 里 `strip` |
+| 枚举 / 白名单 | `Enum` 或 validator 校验可选值 |
+
+上限与 **Model 列长 / 业务约定** 对齐（如 `String(200)` → DTO `max_length=200`）。
+
+## Service 禁止
+
+```python
+# ❌ 用截断代替校验
+title = (payload.title or "").strip()[:200]
+
+# ✅ 直接使用
+title = payload.title
+```
+
+局部更新可用 `model_dump(exclude_unset=True)` + 赋值；**不要**再二次截断。
+
+## 注释
+
+- Service / Schema 注释只写**业务在做什么**。
+- **不要**写「已由 DTO 校验」「值已由 DTO 规范化」这类说明——约定在本 rule，不塞进业务注释。
+
+```python
+# ❌
+# 组装并落库草稿（长度 / 分类已由 DTO 校验）
+
+# ✅
+# 组装并落库草稿
+```
+
+## 与业务校验的边界
+
+- DTO：结构合法（多长、什么格式、是否在白名单）。
+- Service：敏感词、资源是否存在、是否有权、状态是否允许操作等。
+
+## 参考
+
+- 文章：`app/schemas/article.py`
+- 认证：`app/schemas/auth.py`
+- AI 写作：`app/schemas/editor_ai.py`

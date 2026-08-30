@@ -2,12 +2,7 @@
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.constants import (
-    ARTICLE_CATEGORIES,
-    ArticleStatus,
-    ReviewStatus,
-    UserRole,
-)
+from app.core.constants import ArticleStatus, ReviewStatus, UserRole
 from app.core.error_codes import ErrorCode
 from app.core.exceptions import exception
 from app.core.snowflake import next_id
@@ -51,23 +46,18 @@ def _get_owned_draft(db: Session, user: User, article_id: int) -> Article:
 def create_draft(db: Session, user: User, payload: CreateArticleDTO) -> ArticleVO:
     _ensure_can_write(user)
 
-    # 校验分类白名单
-    category = payload.category.strip() or "后端"
-    if category not in ARTICLE_CATEGORIES:
-        raise exception(ErrorCode.ERR_VALIDATION, http_status=422)
-
     # 组装并落库草稿
     article = Article(
         id=next_id(),
         author_id=user.id,
-        title=(payload.title or "").strip()[:200],
-        subtitle=(payload.subtitle or "").strip()[:200],
-        summary=(payload.summary or "").strip()[:500],
-        content_md=payload.content_md or "",
-        tags=list(payload.tags or [])[:8],
-        category=category,
-        column_name=(payload.column_name or "").strip()[:120],
-        cover_url=(payload.cover_url or "").strip()[:512],
+        title=payload.title,
+        subtitle=payload.subtitle,
+        summary=payload.summary,
+        content_md=payload.content_md,
+        tags=list(payload.tags),
+        category=payload.category,
+        column_name=payload.column_name,
+        cover_url=payload.cover_url,
         status=ArticleStatus.DRAFT.value,
         review_status=ReviewStatus.NONE.value,
     )
@@ -91,25 +81,9 @@ def update_draft(
 
     # 按传入字段局部更新
     data = payload.model_dump(exclude_unset=True)
-    if "title" in data and data["title"] is not None:
-        article.title = str(data["title"]).strip()[:200]
-    if "subtitle" in data and data["subtitle"] is not None:
-        article.subtitle = str(data["subtitle"]).strip()[:200]
-    if "summary" in data and data["summary"] is not None:
-        article.summary = str(data["summary"]).strip()[:500]
-    if "content_md" in data and data["content_md"] is not None:
-        article.content_md = str(data["content_md"])
-    if "tags" in data and data["tags"] is not None:
-        article.tags = list(data["tags"])[:8]
-    if "category" in data and data["category"] is not None:
-        category = str(data["category"]).strip() or "后端"
-        if category not in ARTICLE_CATEGORIES:
-            raise exception(ErrorCode.ERR_VALIDATION, http_status=422)
-        article.category = category
-    if "column_name" in data and data["column_name"] is not None:
-        article.column_name = str(data["column_name"]).strip()[:120]
-    if "cover_url" in data and data["cover_url"] is not None:
-        article.cover_url = str(data["cover_url"]).strip()[:512]
+    for key, value in data.items():
+        if value is not None:
+            setattr(article, key, value)
 
     try:
         article_repo.touch_updated(db, article)
@@ -118,7 +92,7 @@ def update_draft(
         db.rollback()
         raise exception(ErrorCode.ERR_ARTICLE_SAVE_FAILED, http_status=409) from exc
 
-    # 并发删除后行可能已不存在，避免 refresh 抛 500
+    # 确认文章仍存在
     fresh = article_repo.get_by_id(db, article_id)
     if not fresh:
         raise exception(ErrorCode.ERR_ARTICLE_NOT_FOUND, http_status=404)

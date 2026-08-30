@@ -1,7 +1,7 @@
 # 写作助手 AI 请求 / 响应 Schema
 from pydantic import BaseModel, Field
 
-# 与服务端截断策略对齐的正文上限
+# 正文 / 标题长度上限（与文章草稿 DTO 对齐）
 CONTENT_MD_MAX = 12000
 TITLE_MAX = 200
 

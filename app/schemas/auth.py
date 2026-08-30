@@ -1,8 +1,12 @@
 # 认证相关 Schema
+from typing import Annotated
+
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.core.constants import UserRole
 from app.schemas.user import UserVO
+
+InterestTag = Annotated[str, Field(min_length=1, max_length=32)]
 
 
 class RegisterDTO(BaseModel):
@@ -12,22 +16,22 @@ class RegisterDTO(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
     role: UserRole = UserRole.READER
-    tags: list[str] = Field(default_factory=list)
+    tags: list[InterestTag] = Field(default_factory=list, min_length=1, max_length=20)
     bio: str | None = Field(default=None, max_length=80)
 
-    @field_validator("username")
+    @field_validator("username", "bio", mode="before")
     @classmethod
-    def strip_username(cls, value: str) -> str:
-        # 去掉首尾空白
-        return value.strip()
-
-    @field_validator("tags")
-    @classmethod
-    def tags_not_empty(cls, value: list[str]) -> list[str]:
-        # 至少选择一个兴趣标签
-        if not value:
-            raise ValueError("请至少选择 1 个兴趣标签")
+    def strip_text(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.strip()
         return value
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def strip_tags(cls, value: object) -> object:
+        if not isinstance(value, list):
+            return value
+        return [str(t).strip() for t in value if str(t).strip()]
 
 
 class LoginDTO(BaseModel):

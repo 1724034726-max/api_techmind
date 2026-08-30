@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>首页 · TechMind</title>
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+  <header class="app-top">
+    <div class="app-top-inner">
+      <a class="logo" href="home.html">Tech<span>Mind</span></a>
+      <nav class="nav">
+        <a class="active" href="home.html">首页</a>
+        <a href="search.html">语义搜索</a>
+        <a href="editor.html">写文章</a>
+        <a href="favorites.html">收藏</a>
+        <a href="profile.html">我的</a>
+      </nav>
+      <div class="top-actions">
+        <a class="btn" href="search.html">搜索</a>
+        <span data-auth-actions="compact"></span>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="home-intro">
+      <div>
+        <div class="eyebrow">For You</div>
+        <h1>今日推荐</h1>
+        <p class="lede">按你的兴趣与文章质量排序。想带着问题找文，去用语义搜索。</p>
+      </div>
+      <aside class="side-stats home-intro-stats">
+        <div class="stat" id="homePersonal"><strong>—</strong><span>加载中…</span></div>
+        <div class="stat"><strong>128</strong><span>今日新内容</span></div>
+      </aside>
+    </section>
+
+    <div class="feed-tabs" id="homeFeedTabs">
+      <button type="button" class="on" data-home-tab="for-you">为你推荐</button>
+      <button type="button" data-home-tab="trending">本周热门</button>
+      <button type="button" data-home-tab="quality">高分精选</button>
+    </div>
+
+    <div class="feed" data-home-panel="for-you">
+      <a class="article-card" href="article.html">
+        <div>
+          <div class="meta"><span>林晓舟</span><span>与你相关 · Redis</span><span>12 min</span></div>
+          <h3>Redisson 分布式锁源码分析：可重入与 WatchDog</h3>
+          <p class="lede" style="margin:0">深入讲解 lua 脚本加锁、锁续期机制，以及和 Jedis 实现的差异。</p>
+          <div style="margin-top:12px">
+            <span class="tag">#Redis</span><span class="tag">#分布式锁</span>
+          </div>
+        </div>
+        <div class="score"><b>92</b></div>
+      </a>
+      <a class="article-card" href="article.html">
+        <div>
+          <div class="meta"><span>李四</span><span>多样性 · 云原生</span><span>10 min</span></div>
+          <h3>K8s 上的 JVM 内存配置踩坑实录</h3>
+          <p class="lede" style="margin:0">容器场景下 Heap / 元空间 / DirectMemory 如何设。</p>
+          <div style="margin-top:12px">
+            <span class="tag">#K8s</span><span class="tag">#JVM</span>
+          </div>
+        </div>
+        <div class="score"><b>84</b></div>
+      </a>
+      <a class="article-card" href="column.html">
+        <div>
+          <div class="meta"><span>专栏更新</span><span>林晓舟</span><span>9 min</span></div>
+          <h3>Spring 事务传播行为：一张图讲清 7 种</h3>
+          <p class="lede" style="margin:0">你关注的专栏有新文章。</p>
+          <div style="margin-top:12px">
+            <span class="tag">#Spring</span><span class="tag">#事务</span>
+          </div>
+        </div>
+        <div class="score"><b>89</b></div>
+      </a>
+    </div>
+
+    <div class="feed hidden" data-home-panel="trending">
+      <a class="article-card" href="article.html">
+        <div>
+          <div class="meta"><span>热度 ↑ 210%</span><span>24h 阅读 8.6k</span></div>
+          <h3>GraalVM 在微服务中的落地实践</h3>
+          <p class="lede" style="margin:0">本周讨论最多的 JVM 细分话题。</p>
+          <div style="margin-top:12px"><span class="tag">#GraalVM</span><span class="tag">#微服务</span></div>
+        </div>
+        <div class="score"><b>90</b></div>
+      </a>
+      <a class="article-card" href="article.html">
+        <div>
+          <div class="meta"><span>热度 ↑ 150%</span><span>讨论 420</span></div>
+          <h3>ZGC vs G1：生产环境选型对比</h3>
+          <p class="lede" style="margin:0">近 7 天搜索与收藏双高。</p>
+          <div style="margin-top:12px"><span class="tag">#ZGC</span><span class="tag">#GC</span></div>
+        </div>
+        <div class="score"><b>88</b></div>
+      </a>
+      <a class="article-card" href="article.html">
+        <div>
+          <div class="meta"><span>热度 ↑ 98%</span><span>新人向</span></div>
+          <h3>Arthas 在线诊断 JVM 的 5 个实战案例</h3>
+          <p class="lede" style="margin:0">实操向内容，收藏转化高。</p>
+          <div style="margin-top:12px"><span class="tag">#Arthas</span><span class="tag">#排查</span></div>
+        </div>
+        <div class="score"><b>86</b></div>
+      </a>
+    </div>
+
+    <div class="feed hidden" data-home-panel="quality">
+      <a class="article-card" href="article.html">
+        <div>
+          <div class="meta"><span>深度 96 · 可读性 91</span><span>代码质量 94</span></div>
+          <h3>Bean 生命周期：从定义到销毁的完整链路</h3>
+          <p class="lede" style="margin:0">AI 综合质量分领先本周后端内容。</p>
+          <div style="margin-top:12px"><span class="tag">#Spring</span><span class="tag">#源码</span></div>
+        </div>
+        <div class="score"><b>94</b></div>
+      </a>
+      <a class="article-card" href="article.html">
+        <div>
+          <div class="meta"><span>深度 93 · 可读性 90</span><span>代码质量 92</span></div>
+          <h3>Redisson 分布式锁源码分析：可重入与 WatchDog</h3>
+          <p class="lede" style="margin:0">高分源码向长文，适合完整阅读。</p>
+          <div style="margin-top:12px"><span class="tag">#Redis</span><span class="tag">#源码</span></div>
+        </div>
+        <div class="score"><b>92</b></div>
+      </a>
+      <a class="article-card" href="article.html">
+        <div>
+          <div class="meta"><span>深度 90 · 可读性 88</span><span>代码质量 89</span></div>
+          <h3>Next.js SSR 在内容站的实践取舍</h3>
+          <p class="lede" style="margin:0">跨领域高分，用于拓宽阅读面。</p>
+          <div style="margin-top:12px"><span class="tag">#Next.js</span><span class="tag">#SSR</span></div>
+        </div>
+        <div class="score"><b>89</b></div>
+      </a>
+    </div>
+
+    <section class="home-topics">
+      <div class="section-head">
+        <div>
+          <h2>本周话题</h2>
+          <p>AI 热点追踪 · 进入专题页</p>
+        </div>
+        <a class="btn btn-ghost" href="topic.html">全部专题 →</a>
+      </div>
+      <div class="topic-row">
+        <a class="topic-card" href="topic.html">
+          <span>01</span>
+          <div>
+            <strong>JVM 调优</strong>
+            <span>12 篇新内容 · 高质量 3</span>
+          </div>
+        </a>
+        <a class="topic-card" href="topic.html">
+          <span>02</span>
+          <div>
+            <strong>缓存异常治理</strong>
+            <span>穿透 / 击穿 / 雪崩</span>
+          </div>
+        </a>
+        <a class="topic-card" href="topic.html">
+          <span>03</span>
+          <div>
+            <strong>容器化 JVM</strong>
+            <span>热度上升 98%</span>
+          </div>
+        </a>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="../js/store.js"></script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

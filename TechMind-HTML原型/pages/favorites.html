@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>智能收藏 · TechMind</title>
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+  <header class="app-top">
+    <div class="app-top-inner">
+      <a class="logo" href="home.html">Tech<span>Mind</span></a>
+      <nav class="nav">
+        <a href="home.html">首页</a>
+        <a href="search.html">语义搜索</a>
+        <a href="editor.html">写文章</a>
+        <a class="active" href="favorites.html">收藏</a>
+        <a href="profile.html">我的</a>
+      </nav>
+      <div class="top-actions" data-auth-actions></div>
+    </div>
+  </header>
+
+  <main class="page">
+    <div id="favGuest" class="settings-empty hidden">
+      <div class="eyebrow">Favorites</div>
+      <h1 style="max-width:none">登录后同步智能收藏</h1>
+      <p class="lede">收藏将按主题自动归类，并提醒你重温未读内容。</p>
+      <div class="chip-row">
+        <a class="btn btn-primary" href="login.html">登录</a>
+        <a class="btn" href="article.html">先去看文章</a>
+      </div>
+    </div>
+
+    <div class="grid-2" id="favLayout">
+      <aside class="side-nav">
+        <h3>Folders</h3>
+        <button type="button" class="on" data-folder="all">全部</button>
+        <button type="button" data-folder="distributed">分布式系统</button>
+        <button type="button" data-folder="jvm">JVM / 性能</button>
+        <button type="button" data-folder="frontend">前端工程</button>
+        <button type="button" data-folder="unread">30 天未读</button>
+      </aside>
+
+      <section>
+        <div class="remind">
+          你有未读收藏，建议安排时间重温。
+          <button class="btn btn-ghost" style="margin-left:8px" type="button" data-toast="已开启每周重温提醒">开启提醒 →</button>
+        </div>
+
+        <div id="favEmpty" class="empty-feed hidden">
+          暂无收藏，去发现好文章吧。
+        </div>
+        <div class="feed" id="favFeed"></div>
+      </section>
+    </div>
+  </main>
+
+  <script src="../js/store.js"></script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

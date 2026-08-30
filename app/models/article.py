@@ -21,7 +21,7 @@ from app.models.base import Base
 
 
 class Article(Base):
-    """文章主表（草稿与已发布共用；本迭代仅写 draft）。"""
+    """文章主表（草稿与已发布共用）。"""
 
     __tablename__ = "articles"
     __table_args__ = (

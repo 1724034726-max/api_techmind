@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>运营台 · TechMind</title>
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+  <header class="app-top">
+    <div class="app-top-inner">
+      <a class="logo" href="home.html">Tech<span>Mind</span></a>
+      <nav class="nav">
+        <a href="home.html">首页</a>
+        <a href="search.html">语义搜索</a>
+        <a href="editor.html">写文章</a>
+        <a href="favorites.html">收藏</a>
+        <a href="profile.html">我的</a>
+      </nav>
+      <div class="top-actions" data-auth-actions></div>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="eyebrow">Ops · F9 / F11</div>
+    <h1 style="max-width:none">平台智能运营</h1>
+    <p class="lede">内容质量复核、推荐池干预、热点专题运营。</p>
+
+    <div class="admin-stats">
+      <div class="stat"><strong id="adminPending">0</strong><span>待审核</span></div>
+      <div class="stat"><strong>128</strong><span>今日入库</span></div>
+      <div class="stat"><strong>36</strong><span>进入推荐池</span></div>
+      <div class="stat"><strong>3</strong><span>本周专题</span></div>
+    </div>
+
+    <div class="section-head">
+      <div>
+        <h2>审核队列</h2>
+        <p>结合 AI 质量分辅助人工决策</p>
+      </div>
+      <a class="btn" href="topic.html">管理热点专题</a>
+    </div>
+
+    <div class="admin-table" id="adminQueue"></div>
+
+    <div class="section-head" style="margin-top:40px">
+      <div>
+        <h2>推荐策略（示意）</h2>
+        <p>冷启动热度公式与个性化切换</p>
+      </div>
+    </div>
+    <div class="admin-strategy">
+      <label class="check"><input type="checkbox" checked /><span>启用个性化推荐（有行为用户）</span></label>
+      <label class="check"><input type="checkbox" checked /><span>冷启动：阅读×0.3 + 点赞×0.5 + AI评分×0.2</span></label>
+      <label class="check"><input type="checkbox" checked /><span>多样性穿插（云原生 / AI / 前端）</span></label>
+      <button class="btn btn-primary" type="button" data-toast="推荐策略已保存">保存策略</button>
+    </div>
+  </main>
+
+  <script src="../js/store.js"></script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

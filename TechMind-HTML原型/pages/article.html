@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>文章详情 · TechMind</title>
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+  <header class="app-top">
+    <div class="app-top-inner">
+      <a class="logo" href="home.html">Tech<span>Mind</span></a>
+      <nav class="nav">
+        <a href="home.html">首页</a>
+        <a href="search.html">语义搜索</a>
+        <a href="editor.html">写文章</a>
+        <a href="favorites.html">收藏</a>
+        <a href="profile.html">我的</a>
+      </nav>
+      <div class="top-actions" data-auth-actions></div>
+    </div>
+  </header>
+
+  <main class="page article-layout">
+    <aside class="article-toc" id="articleToc" aria-label="文章目录">
+      <div class="toc-label">目录</div>
+      <nav class="toc-nav" id="tocNav">
+        <a href="#sec-guide" class="toc-link on" data-toc>智能导读</a>
+        <a href="#sec-intro" class="toc-link" data-toc>背景介绍</a>
+        <a href="#sec-lua" class="toc-link" data-toc>1. 加锁：为什么用 Lua？</a>
+        <a href="#sec-reentrant" class="toc-link toc-sub" data-toc>可重入计数</a>
+        <a href="#sec-watchdog" class="toc-link" data-toc>2. WatchDog 续期</a>
+        <a href="#sec-prod" class="toc-link" data-toc>3. 和生产相关的建议</a>
+        <a href="#sec-compare" class="toc-link" data-toc>4. 与 Jedis 对比</a>
+        <a href="#comments" class="toc-link" data-toc>评论</a>
+      </nav>
+    </aside>
+
+    <article class="article-main">
+      <div class="meta">
+        <a href="author.html">林晓舟</a>
+        <a href="column.html">Spring 源码深度解析</a>
+        <span>2026-03-12</span>
+        <span>12 min</span>
+        <span>AI 92</span>
+      </div>
+      <h1 style="max-width:18ch">Redisson 分布式锁源码分析</h1>
+      <div style="margin-bottom:8px">
+        <span class="tag">#Redis</span><span class="tag">#分布式锁</span><span class="tag">#源码</span>
+      </div>
+
+      <section class="guide" id="sec-guide">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+          <h3 style="margin:0">智能导读</h3>
+          <button class="btn btn-ghost" type="button" id="guideToggle">收起</button>
+        </div>
+        <div id="guideBody" class="row" style="margin-top:16px">
+          <p><strong style="color:var(--ink)">核心观点</strong> — 深入分析 Redisson 分布式锁源码，重点讲解可重入锁与 WatchDog 续期。</p>
+          <p><strong style="color:var(--ink)">适合谁读</strong> — 有一定 Redis 基础，想搞懂分布式锁细节的后端开发。</p>
+          <p><strong style="color:var(--ink)">阅读预计</strong> — 12 分钟</p>
+          <div>
+            <strong style="color:var(--ink)">关键亮点</strong>
+            <ul>
+              <li>详细解析 lua 脚本在锁操作中的运用</li>
+              <li>对比 Redisson 与 Jedis 锁实现差异</li>
+              <li>附带生产环境使用建议与避坑指南</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <div class="article-body">
+        <h2 id="sec-intro">背景介绍</h2>
+        <p>在微服务架构中，分布式锁几乎是绕不开的话题。本文将从 Redisson 的 <code>RLock</code> 入手，顺着加锁、可重入、续期三条线把源码拆开看。</p>
+
+        <h2 id="sec-lua">1. 加锁：为什么用 Lua？</h2>
+        <p>Redis 单命令原子，但「判断 + 写入」需要组合语义。Redisson 把可重入计数与过期时间写进同一段 Lua，保证并发下不会撕裂。</p>
+        <pre>if (redis.call('exists', KEYS[1]) == 0) then
+  redis.call('hset', KEYS[1], ARGV[2], 1)
+  redis.call('pexpire', KEYS[1], ARGV[1])
+  return nil
+end</pre>
+
+        <h3 id="sec-reentrant">可重入计数</h3>
+        <p>同一线程再次加锁时，Hash 中的计数值加一；解锁则减一，减到 0 才真正删除 key。这与 JDK 的可重入锁语义一致。</p>
+
+        <h2 id="sec-watchdog">2. WatchDog 续期</h2>
+        <p>默认锁 30 秒过期。若业务未执行完，WatchDog 会按约 10 秒周期续期，避免长任务中途丢锁——也要注意进程崩溃后的锁释放策略。</p>
+        <p>若业务线程卡死，续期可能让锁长时间不释放，因此生产环境更推荐设置合理的 <code>leaseTime</code>，并在 <code>finally</code> 中主动 unlock。</p>
+
+        <h2 id="sec-prod">3. 和生产相关的建议</h2>
+        <p>明确锁粒度、失败重试退避，以及和「空值缓存 / 布隆过滤器」等方案组合，才能同时守住正确性与可用性。</p>
+        <p>监控持锁时长、超时告警，比单纯依赖默认参数更重要。</p>
+
+        <h2 id="sec-compare">4. 与 Jedis 对比</h2>
+        <p>Jedis 更轻，但续期、可重入、红锁等能力需要自行拼装；Redisson 开箱即用，代价是依赖更重、抽象层更多。选型时按团队运维成本与场景复杂度权衡即可。</p>
+      </div>
+
+      <div class="action-bar">
+        <button class="btn" type="button" data-toast="已点赞 +1" data-toggle-text="已赞 1.2k">点赞 1.2k</button>
+        <button class="btn" type="button" id="favArticleBtn"
+          data-article-id="demo-redisson"
+          data-article-title="Redisson 分布式锁源码分析：可重入与 WatchDog">收藏</button>
+        <a class="btn" href="column.html">查看专栏</a>
+        <a class="btn" href="favorites.html">查看收藏夹</a>
+        <button class="btn btn-primary" type="button" data-toast="已复制分享链接">分享</button>
+      </div>
+
+      <!-- 评论区 -->
+      <section class="comments" id="comments">
+        <div class="comments-head">
+          <h2>评论 <em>24</em></h2>
+          <div class="comment-sort">
+            <button type="button" class="on" data-comment-sort="hot">最热</button>
+            <button type="button" data-comment-sort="new">最新</button>
+          </div>
+        </div>
+
+        <div class="composer">
+          <div class="composer-avatar" id="composerName">?</div>
+          <div class="composer-body">
+            <textarea id="commentInput" rows="3" placeholder="友善讨论，支持 Markdown…"></textarea>
+            <div class="composer-bar">
+              <div class="composer-tools">
+                <button type="button" data-toast="已插入代码块">&lt;/&gt;</button>
+                <button type="button" data-toast="图片上传成功">图片</button>
+                <label class="check"><input type="checkbox" /><span>同时转发到动态</span></label>
+              </div>
+              <div class="composer-actions">
+                <span class="composer-count"><i id="cCount">0</i>/500</span>
+                <button class="btn" type="button" id="cancelComment">清空</button>
+                <button class="btn btn-primary" type="button" id="postComment">发布评论</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="comment-list" id="commentList">
+          <article class="c-item" data-sort-hot="3" data-sort-new="2">
+            <div class="c-avatar">A</div>
+            <div class="c-main">
+              <div class="c-meta">
+                <strong>读者 A</strong>
+                <span>作者赞过</span>
+                <time>2 小时前</time>
+              </div>
+              <p class="c-text">WatchDog 那一段讲得很清楚。想问一下：业务线程卡死时，续期会不会导致锁一直不释放？</p>
+              <div class="c-actions">
+                <button type="button" data-c-like>赞 36</button>
+                <button type="button" data-c-reply>回复</button>
+                <button type="button" data-toast="已提交举报">举报</button>
+              </div>
+              <div class="reply-box hidden">
+                <textarea rows="2" placeholder="回复 读者 A…"></textarea>
+                <div class="reply-actions">
+                  <button class="btn btn-ghost" type="button" data-c-cancel>取消</button>
+                  <button class="btn btn-primary" type="button" data-c-send>回复</button>
+                </div>
+              </div>
+              <div class="c-children">
+                <article class="c-item nested">
+                  <div class="c-avatar author">林</div>
+                  <div class="c-main">
+                    <div class="c-meta">
+                      <strong>林晓舟</strong>
+                      <span class="badge">作者</span>
+                      <time>1 小时前</time>
+                    </div>
+                    <p class="c-text">会的。所以生产上更稳妥的是设置合理 leaseTime，或在 finally 里主动 unlock，并监控持锁时长。</p>
+                    <div class="c-actions">
+                      <button type="button" data-c-like>赞 18</button>
+                      <button type="button" data-c-reply>回复</button>
+                    </div>
+                    <div class="reply-box hidden">
+                      <textarea rows="2" placeholder="回复 林晓舟…"></textarea>
+                      <div class="reply-actions">
+                        <button class="btn btn-ghost" type="button" data-c-cancel>取消</button>
+                        <button class="btn btn-primary" type="button" data-c-send>回复</button>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </article>
+
+          <article class="c-item" data-sort-hot="2" data-sort-new="1">
+            <div class="c-avatar">B</div>
+            <div class="c-main">
+              <div class="c-meta">
+                <strong>读者 B</strong>
+                <time>昨天</time>
+              </div>
+              <p class="c-text">希望再补一篇和 ZooKeeper 锁的对比，尤其是「可重入 + 临时节点」那块。</p>
+              <div class="c-actions">
+                <button type="button" data-c-like>赞 12</button>
+                <button type="button" data-c-reply>回复</button>
+              </div>
+              <div class="reply-box hidden">
+                <textarea rows="2" placeholder="回复 读者 B…"></textarea>
+                <div class="reply-actions">
+                  <button class="btn btn-ghost" type="button" data-c-cancel>取消</button>
+                  <button class="btn btn-primary" type="button" data-c-send>回复</button>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="c-item" data-sort-hot="1" data-sort-new="3">
+            <div class="c-avatar">C</div>
+            <div class="c-main">
+              <div class="c-meta">
+                <strong>CloudNative_C</strong>
+                <time>3 天前</time>
+              </div>
+              <p class="c-text">Lua 那段示例很关键。建议正文里再标一下 KEYS / ARGV 各自代表什么，新人会更友好。</p>
+              <div class="c-actions">
+                <button type="button" data-c-like>赞 9</button>
+                <button type="button" data-c-reply>回复</button>
+              </div>
+              <div class="reply-box hidden">
+                <textarea rows="2" placeholder="回复 CloudNative_C…"></textarea>
+                <div class="reply-actions">
+                  <button class="btn btn-ghost" type="button" data-c-cancel>取消</button>
+                  <button class="btn btn-primary" type="button" data-c-send>回复</button>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <button class="btn load-more" type="button" data-toast="已加载更多评论">加载更多评论</button>
+      </section>
+    </article>
+
+    <aside class="related">
+      <h3>Related</h3>
+      <p style="color:var(--muted);font-size:0.85rem;margin:0 0 8px;line-height:1.5">基于向量相似度，不限于同一作者</p>
+      <a class="related-item" href="article.html">
+        <div>深入理解布隆过滤器 · <span class="sim">92%</span></div>
+        <small>同样讲了缓存穿透方案，侧重数学原理</small>
+      </a>
+      <a class="related-item" href="article.html">
+        <div>缓存雪崩、穿透、击穿 · <span class="sim">87%</span></div>
+        <small>更全面的缓存异常场景分析</small>
+      </a>
+      <a class="related-item" href="article.html">
+        <div>Redis 缓存设计最佳实践 · <span class="sim">79%</span></div>
+        <small>生产配置与监控方案</small>
+      </a>
+      <a class="btn" style="width:100%;margin-top:20px" href="#comments">跳到评论</a>
+    </aside>
+  </main>
+
+  <script src="../js/store.js"></script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

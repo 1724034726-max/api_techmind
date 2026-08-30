@@ -20,10 +20,12 @@ class ErrorCode(Enum):
     ERR_TOKEN_INVALID = ("err21234336", "无效的访问令牌")
     ERR_TOKEN_EXPIRED = ("err21234337", "访问令牌已过期")
     ERR_ACCOUNT_DISABLED = ("err21234338", "账号已禁用")
-    ERR_SENSITIVE_WORD = ("err21234339", "标签包含敏感词，请修改后重试")
+    ERR_SENSITIVE_WORD = ("err21234339", "内容包含敏感词，请修改后重试")
 
     # —— 文章 / 草稿 ——
     ERR_ARTICLE_NOT_FOUND = ("err31200001", "文章不存在")
+    ERR_ARTICLE_TITLE_REQUIRED = ("err31200002", "发布前请填写标题")
+    ERR_ARTICLE_CONTENT_REQUIRED = ("err31200003", "发布前请填写正文")
     ERR_ARTICLE_NOT_AUTHOR = ("err31200004", "无权操作该文章")
     ERR_ARTICLE_STATUS = ("err31200005", "当前状态不允许该操作")
     ERR_ARTICLE_SAVE_FAILED = ("err31200006", "文章保存失败，请稍后重试")

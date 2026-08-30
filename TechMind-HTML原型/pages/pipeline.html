@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>发布处理中 · TechMind</title>
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+  <header class="app-top">
+    <div class="app-top-inner">
+      <a class="logo" href="home.html">Tech<span>Mind</span></a>
+      <nav class="nav">
+        <a href="home.html">首页</a>
+        <a href="search.html">语义搜索</a>
+        <a href="editor.html">写文章</a>
+        <a href="favorites.html">收藏</a>
+        <a href="profile.html">我的</a>
+      </nav>
+      <div class="top-actions" data-auth-actions></div>
+    </div>
+  </header>
+
+  <main class="page pipeline-page">
+    <div class="eyebrow">Publish Pipeline</div>
+    <h1 style="max-width:none">文章发布处理中</h1>
+    <p class="lede">标题：<strong id="jobTitle">—</strong></p>
+    <p class="side-hint">异步任务并行执行：向量化、导读、标签、质量评分、关联发现，完成后进入推荐队列。</p>
+
+    <ol class="pipeline-steps" id="pipelineSteps"></ol>
+
+    <div class="chip-row" style="margin-top:28px">
+      <a class="btn btn-primary" href="profile.html">查看我的主页</a>
+      <a class="btn" href="manage.html">文章管理</a>
+      <a class="btn" href="article.html">预览文章页</a>
+    </div>
+  </main>
+
+  <script src="../js/store.js"></script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

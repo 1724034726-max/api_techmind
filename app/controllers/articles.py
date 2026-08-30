@@ -1,4 +1,4 @@
-# 文章草稿路由（本迭代不含发布）
+# 文章草稿 / 发布路由
 from fastapi import APIRouter, Query
 
 from app.deps import CurrentUser, DbSession
@@ -6,6 +6,7 @@ from app.schemas.article import (
     ArticleListVO,
     ArticleVO,
     CreateArticleDTO,
+    PublishArticleDTO,
     UpdateArticleDTO,
 )
 from app.schemas.common import ApiResponse
@@ -59,6 +60,20 @@ def update_article(
 ) -> ApiResponse[ArticleVO]:
     # 更新草稿
     data = article_service.update_draft(db, current_user, article_id, payload)
+    return ApiResponse.ok(data)
+
+
+@router.post("/{article_id}/publish", response_model=ApiResponse[ArticleVO])
+def publish_article(
+    article_id: int,
+    db: DbSession,
+    current_user: CurrentUser,
+    payload: PublishArticleDTO | None = None,
+) -> ApiResponse[ArticleVO]:
+    # 发布草稿（可带 body 合并元数据）
+    data = article_service.publish_article(
+        db, current_user, article_id, payload or PublishArticleDTO()
+    )
     return ApiResponse.ok(data)
 
 

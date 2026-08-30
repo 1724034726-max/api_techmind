@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>登录 · TechMind</title>
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body class="auth-body">
+  <div class="auth-shell">
+    <aside class="auth-brand">
+      <a class="logo" href="home.html">Tech<span>Mind</span></a>
+      <div class="auth-brand-copy">
+        <p class="eyebrow">Welcome back</p>
+        <h1>找到、读懂、用好每一篇技术文章</h1>
+        <p class="lede">登录后同步个性化推荐、智能收藏与写作助手。</p>
+      </div>
+      <p class="auth-foot">TechMind</p>
+    </aside>
+
+    <main class="auth-main">
+      <div class="auth-card">
+        <div class="auth-tabs">
+          <a class="on" href="login.html">登录</a>
+          <a href="register.html">注册</a>
+        </div>
+
+        <p class="auth-tip" id="loginTip">演示账号 <strong>demo</strong> / <strong>demo1234</strong>，也可 <a href="register.html">注册新账号</a></p>
+
+        <form id="loginForm" class="auth-form" novalidate>
+          <label class="field">
+            <span>邮箱 / 用户名</span>
+            <input type="text" name="account" placeholder="you@example.com" required autocomplete="username" />
+          </label>
+
+          <label class="field">
+            <span>密码</span>
+            <div class="field-row">
+              <input id="loginPassword" type="password" name="password" placeholder="输入密码" required autocomplete="current-password" />
+              <button class="field-action" type="button" data-toggle-password="loginPassword">显示</button>
+            </div>
+          </label>
+
+          <div class="auth-meta">
+            <label class="check">
+              <input type="checkbox" checked />
+              <span>记住我</span>
+            </label>
+            <button type="button" class="linkish" data-toast="已发送重置邮件">忘记密码？</button>
+          </div>
+
+          <button class="btn btn-primary auth-submit" type="submit">登录</button>
+        </form>
+
+        <div class="auth-divider"><span>或</span></div>
+
+        <div class="auth-oauth">
+          <button class="btn" type="button" data-toast="正在跳转 GitHub 授权">继续使用 GitHub</button>
+          <button class="btn" type="button" id="fillDemoHint">一键填入演示账号</button>
+        </div>
+
+        <p class="auth-switch">还没有账号？<a href="register.html">创建注册</a></p>
+      </div>
+    </main>
+  </div>
+  <script src="../js/store.js"></script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

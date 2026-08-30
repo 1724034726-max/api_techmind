@@ -1,25 +1,30 @@
-# 文章 / 草稿业务逻辑（本迭代不含发布）
+# 文章 / 草稿业务逻辑（含发布）
+from datetime import datetime, timezone
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.constants import ArticleStatus, ReviewStatus, UserRole
 from app.core.error_codes import ErrorCode
 from app.core.exceptions import exception
+from app.core.sensitive import find_sensitive, first_sensitive_in_tags
 from app.core.snowflake import next_id
 from app.models.article import Article
 from app.models.user import User
 from app.repositories import article_repo
 from app.schemas.article import (
+    SUMMARY_MAX,
     ArticleListItemVO,
     ArticleListVO,
     ArticleVO,
     CreateArticleDTO,
+    PublishArticleDTO,
     UpdateArticleDTO,
 )
 
 
 def _ensure_can_write(user: User) -> None:
-    # 仅作者身份可写草稿
+    # 仅作者身份可写草稿 / 发布
     if user.role not in (UserRole.AUTHOR.value, UserRole.BOTH.value):
         raise exception(ErrorCode.ERR_FORBIDDEN, http_status=403)
 
@@ -41,6 +46,40 @@ def _get_owned_draft(db: Session, user: User, article_id: int) -> Article:
     if article.status != ArticleStatus.DRAFT.value:
         raise exception(ErrorCode.ERR_ARTICLE_STATUS, http_status=400)
     return article
+
+
+def _apply_fields(article: Article, data: dict) -> None:
+    # 按传入字段局部更新（跳过 None）
+    for key, value in data.items():
+        if value is not None:
+            setattr(article, key, value)
+
+
+def _check_sensitive_fields(article: Article) -> None:
+    # 标题 / 导读 / 正文 / 标签敏感词
+    for text in (article.title, article.summary, article.content_md):
+        hit = find_sensitive(text or "")
+        if hit is not None:
+            raise exception(
+                ErrorCode.ERR_SENSITIVE_WORD, http_status=400, detail={"word": hit}
+            )
+    tag_hit = first_sensitive_in_tags(list(article.tags or []))
+    if tag_hit is not None:
+        raise exception(
+            ErrorCode.ERR_SENSITIVE_WORD, http_status=400, detail={"word": tag_hit}
+        )
+
+
+def _generate_summary(title: str, content_md: str) -> str:
+    # 空摘要时按正文截断生成；正文空则用标题兜底
+    body = " ".join((content_md or "").replace("#", " ").split())
+    if not body:
+        text = (title or "").strip() or "（无摘要）"
+    else:
+        text = body
+    if len(text) > SUMMARY_MAX:
+        return text[: SUMMARY_MAX - 1].rstrip() + "…"
+    return text
 
 
 def create_draft(db: Session, user: User, payload: CreateArticleDTO) -> ArticleVO:
@@ -80,10 +119,7 @@ def update_draft(
     article = _get_owned_draft(db, user, article_id)
 
     # 按传入字段局部更新
-    data = payload.model_dump(exclude_unset=True)
-    for key, value in data.items():
-        if value is not None:
-            setattr(article, key, value)
+    _apply_fields(article, payload.model_dump(exclude_unset=True))
 
     try:
         article_repo.touch_updated(db, article)
@@ -141,3 +177,44 @@ def delete_draft(db: Session, user: User, article_id: int) -> None:
     except IntegrityError as exc:
         db.rollback()
         raise exception(ErrorCode.ERR_ARTICLE_SAVE_FAILED, http_status=409) from exc
+
+
+def publish_article(
+    db: Session, user: User, article_id: int, payload: PublishArticleDTO
+) -> ArticleVO:
+    # 合并可选 body → 校验 → 敏感词 → 空摘要生成 → 置为已发布
+    _ensure_can_write(user)
+    article = _get_owned_draft(db, user, article_id)
+
+    _apply_fields(article, payload.model_dump(exclude_unset=True))
+
+    title = (article.title or "").strip()
+    content = (article.content_md or "").strip()
+    if not title:
+        raise exception(ErrorCode.ERR_ARTICLE_TITLE_REQUIRED, http_status=400)
+    if not content:
+        raise exception(ErrorCode.ERR_ARTICLE_CONTENT_REQUIRED, http_status=400)
+
+    article.title = title
+    if not (article.summary or "").strip():
+        article.summary = _generate_summary(title, article.content_md)
+
+    _check_sensitive_fields(article)
+
+    now = datetime.now(timezone.utc)
+    article.status = ArticleStatus.PUBLISHED.value
+    article.review_status = ReviewStatus.PENDING.value
+    if article.published_at is None:
+        article.published_at = now
+
+    try:
+        article_repo.touch_updated(db, article)
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise exception(ErrorCode.ERR_ARTICLE_SAVE_FAILED, http_status=409) from exc
+
+    fresh = article_repo.get_by_id(db, article_id)
+    if not fresh:
+        raise exception(ErrorCode.ERR_ARTICLE_NOT_FOUND, http_status=404)
+    return _to_vo(fresh, user.username)

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>账号设置 · TechMind</title>
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+  <header class="app-top">
+    <div class="app-top-inner">
+      <a class="logo" href="home.html">Tech<span>Mind</span></a>
+      <nav class="nav">
+        <a href="home.html">首页</a>
+        <a href="search.html">语义搜索</a>
+        <a href="editor.html">写文章</a>
+        <a href="favorites.html">收藏</a>
+        <a href="profile.html">我的</a>
+      </nav>
+      <div class="top-actions" data-auth-actions></div>
+    </div>
+  </header>
+
+  <main class="page settings-page">
+    <div class="eyebrow">Account</div>
+    <h1 style="max-width:none">账号与资料</h1>
+    <p class="lede">管理你的基本信息、身份与兴趣偏好。</p>
+
+    <div id="settingsGuest" class="settings-empty hidden">
+      <p>请先 <a href="login.html">登录</a> 后再管理资料。</p>
+    </div>
+
+    <form id="settingsForm" class="settings-form hidden" novalidate>
+      <section class="settings-block">
+        <h2>基本信息</h2>
+        <label class="field">
+          <span>用户名</span>
+          <input name="username" required maxlength="16" />
+        </label>
+        <label class="field">
+          <span>邮箱</span>
+          <input name="email" type="email" required />
+        </label>
+        <label class="field">
+          <span>个人简介</span>
+          <textarea name="bio" rows="3" placeholder="一句话介绍自己"></textarea>
+        </label>
+      </section>
+
+      <section class="settings-block">
+        <h2>账号身份</h2>
+        <div class="role-row" id="settingsRole">
+          <label class="role-chip"><input type="radio" name="role" value="reader" /><span>读者</span></label>
+          <label class="role-chip"><input type="radio" name="role" value="author" /><span>作者</span></label>
+          <label class="role-chip"><input type="radio" name="role" value="both" /><span>两者都有</span></label>
+        </div>
+      </section>
+
+      <section class="settings-block">
+        <h2>兴趣标签</h2>
+        <p class="side-hint">选择你关注的技术领域</p>
+        <div class="tag-pick" id="settingsTags"></div>
+      </section>
+
+      <section class="settings-block">
+        <h2>安全</h2>
+        <label class="field">
+          <span>修改密码（可选）</span>
+          <input name="password" type="password" placeholder="留空则不修改" autocomplete="new-password" />
+        </label>
+      </section>
+
+      <div class="settings-actions">
+        <a class="btn" href="profile.html">返回主页</a>
+        <button class="btn btn-primary" type="submit">保存修改</button>
+        <button class="btn" type="button" id="logoutBtn">退出登录</button>
+      </div>
+    </form>
+  </main>
+
+  <script src="../js/store.js"></script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

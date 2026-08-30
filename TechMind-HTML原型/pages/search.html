@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>语义搜索 · TechMind</title>
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+  <header class="app-top">
+    <div class="app-top-inner">
+      <a class="logo" href="home.html">Tech<span>Mind</span></a>
+      <nav class="nav">
+        <a href="home.html">首页</a>
+        <a class="active" href="search.html">语义搜索</a>
+        <a href="editor.html">写文章</a>
+        <a href="favorites.html">收藏</a>
+        <a href="profile.html">我的</a>
+      </nav>
+      <div class="top-actions" data-auth-actions></div>
+    </div>
+  </header>
+
+  <main class="page search-page">
+    <div class="search-hero">
+      <div class="eyebrow">Semantic Search</div>
+      <h1>用问题找文章</h1>
+      <p class="lede">理解意图与关联概念，而不是只扫标题关键词。</p>
+
+      <form class="search-box" id="searchForm">
+        <input id="searchInput" type="search" placeholder="例如：怎么解决缓存穿透" value="" />
+        <button class="btn btn-primary" type="submit">搜索</button>
+      </form>
+
+      <div class="chip-row" id="searchSuggest">
+        <button class="chip" type="button" data-chip-q="怎么解决缓存穿透">怎么解决缓存穿透</button>
+        <button class="chip" type="button" data-chip-q="Redisson 分布式锁">Redisson 分布式锁</button>
+        <button class="chip" type="button" data-chip-q="JVM 调优实践">JVM 调优实践</button>
+        <button class="chip" type="button" data-chip-q="K8s JVM 内存">K8s JVM 内存</button>
+      </div>
+    </div>
+
+    <!-- 未搜索时的空态 -->
+    <section id="searchIdle" class="search-idle">
+      <div class="search-idle-grid">
+        <div>
+          <h2>语义 vs 关键词</h2>
+          <p class="side-hint">同一句话两种召回方式，结果数量与篇目都会不同。</p>
+          <ul class="loop-list">
+            <li>语义：命中关联概念（如布隆过滤器、空值缓存）</li>
+            <li>关键词：主要匹配标题里的字面词</li>
+          </ul>
+        </div>
+        <div>
+          <h2>最近热搜</h2>
+          <div class="recent-queries">
+            <button type="button" data-chip-q="怎么解决缓存穿透">怎么解决缓存穿透</button>
+            <button type="button" data-chip-q="WatchDog 续期">WatchDog 续期</button>
+            <button type="button" data-chip-q="ZGC vs G1">ZGC vs G1</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 有查询时展示结果 -->
+    <section id="searchResults" class="hidden">
+      <div class="search-result-head">
+        <div class="mode-switch">
+          <button type="button" class="on" data-search-mode="semantic">语义</button>
+          <button type="button" data-search-mode="keyword">关键词</button>
+        </div>
+        <p class="search-query-label">结果 · <strong id="searchQueryText">—</strong></p>
+      </div>
+
+      <div data-mode-panel="semantic">
+        <div class="compare-note">命中 10 篇，包含关联概念文章（标题未必含查询词）。</div>
+        <div class="feed">
+          <a class="result-item" href="article.html">
+            <div>
+              <div class="meta"><span>相似度 0.93</span><span>林晓舟</span><span>质量 92</span></div>
+              <h3>Redisson 分布式锁源码分析：可重入与 WatchDog</h3>
+              <div class="match-box">……通过空值缓存与布隆过滤器组合，可显著降低缓存穿透带来的数据库压力……</div>
+            </div>
+          </a>
+          <a class="result-item" href="article.html">
+            <div>
+              <div class="meta"><span>相似度 0.91</span><span>张三</span><span>质量 88</span></div>
+              <h3>深入理解布隆过滤器：从原理到缓存穿透实战</h3>
+              <div class="match-box">……布隆过滤器在查询前拦截不存在的 key，是解决缓存穿透的经典方案……</div>
+            </div>
+          </a>
+          <a class="result-item" href="article.html">
+            <div>
+              <div class="meta"><span>相似度 0.87</span><span>王五</span><span>质量 85</span></div>
+              <h3>Redis 缓存设计最佳实践</h3>
+              <div class="match-box">……空值缓存需要设置较短 TTL，避免脏数据长期驻留……</div>
+            </div>
+          </a>
+          <a class="result-item" href="article.html">
+            <div>
+              <div class="meta"><span>相似度 0.84</span><span>李四</span><span>质量 83</span></div>
+              <h3>缓存雪崩、穿透、击穿的区别与应对</h3>
+              <div class="match-box">……穿透指查询不存在的数据；击穿指热点 key 失效瞬间……</div>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <div class="hidden" data-mode-panel="keyword">
+        <div class="compare-note">仅命中标题含字面词的 3 篇，关联干货可能被漏掉。</div>
+        <div class="feed">
+          <a class="result-item" href="article.html">
+            <div>
+              <div class="meta"><span>关键词命中</span><span>李四</span></div>
+              <h3>缓存雪崩、穿透、击穿的区别与应对</h3>
+              <div class="match-box">标题命中 · 无语义扩展</div>
+            </div>
+          </a>
+          <a class="result-item" href="article.html">
+            <div>
+              <div class="meta"><span>关键词命中</span><span>赵六</span></div>
+              <h3>聊聊缓存穿透那点事</h3>
+              <div class="match-box">标题命中</div>
+            </div>
+          </a>
+          <a class="result-item" href="article.html">
+            <div>
+              <div class="meta"><span>关键词命中</span><span>钱七</span></div>
+              <h3>缓存穿透问题排查手册</h3>
+              <div class="match-box">标题命中</div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="../js/store.js"></script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

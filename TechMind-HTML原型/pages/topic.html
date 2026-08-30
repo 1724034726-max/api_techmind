@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>热点专题 · TechMind</title>
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+  <header class="app-top">
+    <div class="app-top-inner">
+      <a class="logo" href="home.html">Tech<span>Mind</span></a>
+      <nav class="nav">
+        <a href="home.html">首页</a>
+        <a href="search.html">语义搜索</a>
+        <a href="editor.html">写文章</a>
+        <a href="favorites.html">收藏</a>
+        <a href="profile.html">我的</a>
+      </nav>
+      <div class="top-actions" data-auth-actions></div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="topic-hero">
+      <div class="eyebrow">Hot Topic · F10</div>
+      <h1 id="topicTitle">JVM 调优</h1>
+      <p class="lede" id="topicDesc">AI 发现本周该话题讨论升温：近 30 天 12 篇新文章，高质量仅 3 篇，竞争中等，细分切口仍有空间。</p>
+      <div class="topic-metrics">
+        <div><b>+200%</b><span>热度变化</span></div>
+        <div><b>12</b><span>近 30 天新文</span></div>
+        <div><b>3</b><span>高质量（≥80）</span></div>
+        <div><b>87</b><span>关注作者</span></div>
+      </div>
+      <div class="chip-row">
+        <a class="btn btn-primary" href="editor.html">去写这个话题</a>
+        <a class="btn" href="search.html" data-chip-q="JVM 调优实践">语义搜索该话题</a>
+      </div>
+    </section>
+
+    <div class="section-head">
+      <div>
+        <h2>专题精选</h2>
+        <p>按 AI 质量分与热度综合排序</p>
+      </div>
+    </div>
+    <div class="feed">
+      <a class="article-card" href="article.html">
+        <div>
+          <div class="meta"><span>热度 ↑ 200%</span><span>高质量稀缺</span></div>
+          <h3>GraalVM 在微服务中的落地实践</h3>
+          <p class="lede" style="margin:0">推荐切口：落地案例少，容易出圈。</p>
+        </div>
+        <div class="score"><b>90</b></div>
+      </a>
+      <a class="article-card" href="article.html">
+        <div>
+          <div class="meta"><span>搜索 ↑ 150%</span><span>对比向</span></div>
+          <h3>ZGC vs G1：生产环境选型对比</h3>
+        </div>
+        <div class="score"><b>88</b></div>
+      </a>
+      <a class="article-card" href="article.html">
+        <div>
+          <div class="meta"><span>收藏转化高</span><span>实操向</span></div>
+          <h3>Arthas 在线诊断 JVM 的 5 个实战案例</h3>
+        </div>
+        <div class="score"><b>86</b></div>
+      </a>
+    </div>
+
+    <div class="section-head" style="margin-top:40px">
+      <div>
+        <h2>更多本周专题</h2>
+        <p>点击切换</p>
+      </div>
+    </div>
+    <div class="topic-row">
+      <button type="button" class="topic-card" data-topic="jvm">
+        <span>01</span>
+        <div><strong>JVM 调优</strong><span>当前专题</span></div>
+      </button>
+      <button type="button" class="topic-card" data-topic="cache">
+        <span>02</span>
+        <div><strong>缓存异常治理</strong><span>穿透 / 击穿 / 雪崩</span></div>
+      </button>
+      <button type="button" class="topic-card" data-topic="k8s">
+        <span>03</span>
+        <div><strong>容器化 JVM</strong><span>热度上升 98%</span></div>
+      </button>
+    </div>
+  </main>
+
+  <script src="../js/store.js"></script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

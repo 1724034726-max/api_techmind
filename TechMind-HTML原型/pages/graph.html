@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>知识图谱 · TechMind</title>
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+  <header class="app-top">
+    <div class="app-top-inner">
+      <a class="logo" href="home.html">Tech<span>Mind</span></a>
+      <nav class="nav">
+        <a href="home.html">首页</a>
+        <a href="search.html">语义搜索</a>
+        <a href="editor.html">写文章</a>
+        <a href="favorites.html">收藏</a>
+        <a href="profile.html">我的</a>
+      </nav>
+      <div class="top-actions" data-auth-actions></div>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="eyebrow">Knowledge Graph</div>
+    <h1 style="max-width:none">围绕「缓存穿透」的知识关联</h1>
+    <p class="lede">由文章向量与标签共现构建。点击节点可跳转搜索或文章。</p>
+
+    <div class="graph-shell">
+      <svg class="graph-svg" viewBox="0 0 800 420" role="img" aria-label="知识图谱">
+        <line class="g-edge" x1="400" y1="210" x2="180" y2="90" />
+        <line class="g-edge" x1="400" y1="210" x2="620" y2="90" />
+        <line class="g-edge" x1="400" y1="210" x2="140" y2="280" />
+        <line class="g-edge" x1="400" y1="210" x2="660" y2="280" />
+        <line class="g-edge" x1="400" y1="210" x2="400" y2="360" />
+        <line class="g-edge" x1="180" y1="90" x2="140" y2="280" />
+        <line class="g-edge" x1="620" y1="90" x2="660" y2="280" />
+
+        <a href="search.html" data-chip-q="缓存穿透">
+          <circle class="g-node core" cx="400" cy="210" r="46" />
+          <text class="g-text" x="400" y="215" text-anchor="middle">缓存穿透</text>
+        </a>
+        <a href="article.html">
+          <circle class="g-node" cx="180" cy="90" r="34" />
+          <text class="g-text" x="180" y="95" text-anchor="middle">布隆过滤</text>
+        </a>
+        <a href="article.html">
+          <circle class="g-node" cx="620" cy="90" r="34" />
+          <text class="g-text" x="620" y="95" text-anchor="middle">空值缓存</text>
+        </a>
+        <a href="article.html">
+          <circle class="g-node" cx="140" cy="280" r="32" />
+          <text class="g-text" x="140" y="285" text-anchor="middle">Redis</text>
+        </a>
+        <a href="article.html">
+          <circle class="g-node" cx="660" cy="280" r="32" />
+          <text class="g-text" x="660" y="285" text-anchor="middle">Redisson</text>
+        </a>
+        <a href="search.html" data-chip-q="缓存雪崩 击穿">
+          <circle class="g-node" cx="400" cy="360" r="32" />
+          <text class="g-text" x="400" y="365" text-anchor="middle">雪崩/击穿</text>
+        </a>
+      </svg>
+
+      <aside class="graph-side">
+        <h3>节点说明</h3>
+        <p class="side-hint">中心节点为当前阅读/搜索主题，周边为高相似度概念与文章实体。</p>
+        <div class="graph-legend">
+          <div><i class="lg-core"></i>主题概念</div>
+          <div><i class="lg-node"></i>关联实体</div>
+          <div><i class="lg-edge"></i>语义/共现边</div>
+        </div>
+        <a class="btn" style="width:100%;margin-top:16px" href="article.html">从当前文章查看</a>
+        <a class="btn btn-primary" style="width:100%;margin-top:8px" href="search.html" data-chip-q="怎么解决缓存穿透">用语义搜索展开</a>
+      </aside>
+    </div>
+  </main>
+
+  <script src="../js/store.js"></script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>写文章 · TechMind</title>
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body class="editor-body">
+  <header class="app-top editor-top editor-top--write">
+    <div class="app-top-inner">
+      <button class="btn btn-ghost editor-back" type="button" id="editorBack" title="返回上一页">← 返回</button>
+      <a class="logo" href="home.html">Tech<span>Mind</span></a>
+      <div class="editor-status">
+        <span class="dot"></span>
+        <span id="saveStatus">未保存</span>
+        <span class="sep">·</span>
+        <span id="wordCount">0 字</span>
+      </div>
+      <div class="top-actions">
+        <button class="btn btn-ghost lg-hide" type="button" id="openAiMobile">助手</button>
+        <button class="btn btn-ghost lg-only" type="button" id="toggleAiSide">收起助手</button>
+        <label class="draft-switch">
+          <span class="sr-only">切换草稿</span>
+          <select id="draftSelect" title="切换草稿"></select>
+        </label>
+        <button class="btn btn-ghost" type="button" id="newDraftBtn">新开一篇</button>
+        <button class="btn btn-ghost hidden" type="button" id="backPrevDraft">返回上一篇</button>
+        <button class="btn" type="button" data-save-draft>存草稿</button>
+        <button class="btn btn-primary" type="button" id="openPublish">发布</button>
+        <span data-auth-actions="compact"></span>
+      </div>
+    </div>
+  </header>
+
+  <main class="page editor-page">
+    <div id="editorGate" class="settings-empty hidden" style="margin-bottom:20px">
+      请先 <a href="login.html">登录</a> 后再写作。
+    </div>
+
+    <div id="draftBanner" class="draft-banner hidden">
+      <span id="draftBannerText">检测到未完成的草稿。</span>
+      <button class="btn btn-ghost" type="button" id="draftBannerKeep">继续编辑</button>
+      <button class="btn" type="button" id="draftBannerNew">新开一篇</button>
+    </div>
+
+    <div class="editor-workspace" id="editorWorkspace">
+      <section class="editor-main">
+        <input id="articleTitle" class="editor-title" type="text" placeholder="输入标题" value="" />
+        <input id="articleSubtitle" class="editor-sub" type="text" placeholder="副标题（可选）" />
+        <label class="editor-summary-field">
+          <span>导读摘要</span>
+          <textarea id="articleSummary" rows="2" placeholder="一句话说明本文解决什么问题（可不填，发布时自动生成）"></textarea>
+        </label>
+
+        <div class="editor-toolbar" id="mdToolbar">
+          <button type="button" data-md="h2" title="二级标题">H2</button>
+          <button type="button" data-md="h3" title="三级标题">H3</button>
+          <span class="tb-sep"></span>
+          <button type="button" data-md="bold" title="粗体"><b>B</b></button>
+          <button type="button" data-md="italic" title="斜体"><i>I</i></button>
+          <button type="button" data-md="code" title="行内代码">&lt;/&gt;</button>
+          <button type="button" data-md="codeblock" title="代码块">{ }</button>
+          <span class="tb-sep"></span>
+          <button type="button" data-md="quote" title="引用">“”</button>
+          <button type="button" data-md="ul" title="无序列表">• List</button>
+          <button type="button" data-md="ol" title="有序列表">1. List</button>
+          <button type="button" data-md="link" title="链接">Link</button>
+          <button type="button" data-md="image" title="图片">Image</button>
+          <span class="tb-sep"></span>
+          <label class="tb-upload">上传<input type="file" id="imgUpload" accept="image/*" hidden /></label>
+          <span class="tb-sep"></span>
+          <span class="editor-mode-inline" role="tablist">
+            <button type="button" class="on" data-editor-mode="write">编辑</button>
+            <button type="button" data-editor-mode="preview">预览</button>
+            <button type="button" data-editor-mode="split">分屏</button>
+          </span>
+          <button class="btn btn-ghost hidden" type="button" id="undoAiBtn" style="margin-left:auto">撤销 AI</button>
+        </div>
+
+        <div class="editor-canvas" data-canvas="write">
+          <textarea id="mdSource" class="md-source" placeholder="用 Markdown 开始写作…"></textarea>
+          <div id="mdPreview" class="md-preview hidden article-body"></div>
+        </div>
+      </section>
+
+      <aside class="editor-side" id="editorSide">
+        <div id="aiUndoBar" class="ai-undo-bar hidden">
+          <span id="aiUndoLabel">可撤销上次 AI 改动</span>
+          <button class="btn btn-ghost" type="button" id="undoAiSideBtn">恢复原文</button>
+        </div>
+        <div class="ai-stage-tabs" id="aiStageTabs">
+          <button type="button" class="on" data-ai-stage="topic">选题</button>
+          <button type="button" data-ai-stage="assist">扩写</button>
+          <button type="button" data-ai-stage="polish">润色</button>
+        </div>
+
+        <!-- 选题 = 写什么（切口 / 竞争），不是标题文案工厂 -->
+        <div class="side-block ai-stage on" data-stage-panel="topic">
+          <div class="side-block-head">
+            <h3>写什么</h3>
+            <button class="btn btn-ghost" type="button" id="analyzeTopic">分析</button>
+          </div>
+          <p class="side-hint">找切口与竞争空白。选定后写入工作标题 + 大纲骨架；导读留给「润色」。</p>
+          <input id="topicKeyword" type="text" placeholder="关键词，如 JVM" value="JVM" />
+          <div id="topicResult" class="ai-mini">
+            <p id="topicInsight">近 30 天「JVM」相关约 12 篇，高质量仅 3 篇。优先选更细分切口。</p>
+            <button type="button" class="text-btn topic-pick-btn"
+              data-preview-topic="ZGC vs G1：生产环境怎么选"
+              data-topic-angle="对比选型"
+              data-topic-outline="## 背景&#10;&#10;为什么生产环境 GC 选型总被低估。&#10;&#10;## 对比维度&#10;&#10;- 停顿&#10;- 吞吐&#10;- 调参成本&#10;&#10;## 结论&#10;&#10;给出可落地的选型建议。">
+              <strong>对比选型</strong>
+              <span>ZGC vs G1 · 竞争中等，适合写清决策边界</span>
+            </button>
+            <button type="button" class="text-btn topic-pick-btn"
+              data-preview-topic="Arthas 排查线上 JVM 问题的 5 个步骤"
+              data-topic-angle="实战手册"
+              data-topic-outline="## 场景&#10;&#10;线上 CPU / 内存异常时怎么入手。&#10;&#10;## 五步排查&#10;&#10;1. 进程与线程&#10;2. 火焰图&#10;3. 堆与 GC&#10;4. 类加载&#10;5. 回滚与复盘&#10;&#10;## 小结">
+              <strong>实战手册</strong>
+              <span>Arthas 排查步骤 · 高质量少，易出差异化</span>
+            </button>
+            <button type="button" class="text-btn topic-pick-btn"
+              data-preview-topic="GraalVM Native Image 在微服务里的代价"
+              data-topic-angle="踩坑复盘"
+              data-topic-outline="## 为什么上 Native Image&#10;&#10;## 真实成本&#10;&#10;- 构建时长&#10;- 反射配置&#10;- 可观测性&#10;&#10;## 什么时候不该上">
+              <strong>踩坑复盘</strong>
+              <span>GraalVM 落地代价 · 避免又一篇「入门介绍」</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="side-block ai-stage hidden" data-stage-panel="assist">
+          <h3>大纲 → 全文</h3>
+          <p class="side-hint">基于当前正文大纲扩写初稿，应用前可预览。</p>
+          <button class="btn" type="button" id="expandDraft" style="width:100%">生成初稿预览</button>
+          <div id="expandPreview" class="ai-preview hidden">
+            <p class="side-hint">将追加到文末：</p>
+            <pre id="expandPreviewText" class="ai-preview-text"></pre>
+            <div class="ai-preview-actions">
+              <button class="btn btn-primary" type="button" id="applyExpand">应用</button>
+              <button class="btn btn-ghost" type="button" id="dismissExpand">取消</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 润色 = 导读 + 开头，不碰选题 -->
+        <div class="side-block ai-stage hidden" data-stage-panel="polish">
+          <div class="side-block-head">
+            <h3>怎么写</h3>
+          </div>
+          <p class="side-hint">不换选题。生成导读会填到左侧摘要框，也可直接手改；发布时若仍为空会自动生成。</p>
+          <button class="btn" type="button" id="polishSummary" style="width:100%">生成导读摘要</button>
+          <div id="summaryOpts" class="hidden title-list"></div>
+          <button class="btn" type="button" id="polishOpenings" style="width:100%;margin-top:10px">改写开头</button>
+          <div id="openingOpts" class="hidden opening-list">
+            <button type="button" data-preview-opening="在微服务架构里，分布式锁几乎是躲不开的基础设施。本文从 Redisson 源码出发，把加锁与续期机制讲清楚。">开头 A · 场景切入</button>
+            <button type="button" data-preview-opening="如果你用过 synchronized，却在分布式环境踩过坑，这份 Redisson 源码笔记可能对你有用。">开头 B · 共鸣提问</button>
+            <button type="button" data-preview-opening="结论先行：WatchDog 不是银弹。理解 Lua 加锁与续期边界，才能在生产里用对分布式锁。">开头 C · 结论先行</button>
+          </div>
+          <div id="openingPreview" class="ai-preview hidden" style="margin-top:12px">
+            <p class="side-hint">将插入文首：</p>
+            <pre id="openingPreviewText" class="ai-preview-text"></pre>
+            <div class="ai-preview-actions">
+              <button class="btn btn-primary" type="button" id="applyOpening">应用</button>
+              <button class="btn btn-ghost" type="button" id="dismissOpening">取消</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <div class="drawer-mask hidden" id="aiMask"></div>
+  <aside class="drawer drawer-ai hidden" id="aiDrawer">
+    <div class="drawer-head">
+      <h2>写作助手</h2>
+      <button class="btn btn-ghost" type="button" id="closeAiMobile">关闭</button>
+    </div>
+    <div class="drawer-body" id="aiDrawerBody"></div>
+  </aside>
+
+  <div class="drawer-mask hidden" id="topicMask"></div>
+  <aside class="drawer drawer-sm hidden" id="topicConfirm">
+    <div class="drawer-head">
+      <h2 id="confirmDialogTitle">采用选题？</h2>
+      <button class="btn btn-ghost" type="button" id="closeTopicConfirm">关闭</button>
+    </div>
+    <div class="drawer-body">
+      <p class="side-hint" id="confirmDialogHint">将写入工作标题，正文为空时填入大纲骨架：</p>
+      <p id="topicConfirmAngle" class="topic-confirm-angle hidden"></p>
+      <p id="topicConfirmText" class="ai-confirm-title"></p>
+    </div>
+    <div class="drawer-foot">
+      <button class="btn btn-ghost" type="button" id="cancelTopicConfirm">取消</button>
+      <button class="btn btn-primary" type="button" id="applyTopicConfirm">应用</button>
+    </div>
+  </aside>
+
+  <div class="drawer-mask hidden" id="publishMask"></div>
+  <aside class="drawer hidden" id="publishDrawer">
+    <div class="drawer-head">
+      <h2>发布设置</h2>
+      <button class="btn btn-ghost" type="button" id="closePublish">关闭</button>
+    </div>
+    <div class="drawer-body">
+      <label class="field">
+        <span>专栏</span>
+        <select id="pubColumn">
+          <option value="">不放入专栏</option>
+          <option selected>Spring 源码深度解析</option>
+          <option>新建专栏…</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>分类</span>
+        <select id="pubCategory">
+          <option>后端</option>
+          <option>前端</option>
+          <option>AI</option>
+          <option>云原生</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>标签</span>
+        <div id="tagPreview" class="tag-edit">
+          <span class="tag-pill">#Redis <button type="button" aria-label="移除">×</button></span>
+          <span class="tag-pill">#分布式锁 <button type="button" aria-label="移除">×</button></span>
+          <button class="tag-add" type="button" id="addTagBtn">+ 添加</button>
+        </div>
+        <button class="btn btn-ghost" type="button" id="genTags" style="margin-top:8px">智能生成标签</button>
+      </label>
+      <label class="field">
+        <span>封面</span>
+        <div class="cover-slot" data-toast="封面上传成功（原型）">
+          <span>点击上传封面图</span>
+          <small>建议 1200×630</small>
+        </div>
+      </label>
+      <label class="field">
+        <span>摘要（与编辑页导读同步；空则发布时自动生成）</span>
+        <textarea id="pubSummary" rows="3" placeholder="一句话说明本文解决什么问题"></textarea>
+      </label>
+      <label class="check"><input type="checkbox" checked /><span>发布后自动生成智能导读</span></label>
+      <label class="check"><input type="checkbox" checked /><span>发布后写入向量库（语义搜索）</span></label>
+      <label class="check"><input type="checkbox" checked /><span>允许评论</span></label>
+      <label class="check"><input type="checkbox" id="scheduleToggle" /><span>定时发布</span></label>
+      <label class="field hidden" id="scheduleField">
+        <span>发布时间</span>
+        <input type="datetime-local" id="scheduleAt" />
+      </label>
+    </div>
+    <div class="drawer-foot">
+      <button class="btn" type="button" data-save-draft>存草稿</button>
+      <button class="btn btn-primary" type="button" id="confirmPublish">确认发布</button>
+    </div>
+  </aside>
+
+  <script src="../js/store.js"></script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

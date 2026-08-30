@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>注册 · TechMind</title>
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body class="auth-body">
+  <div class="auth-shell">
+    <aside class="auth-brand">
+      <a class="logo" href="home.html">Tech<span>Mind</span></a>
+      <div class="auth-brand-copy">
+        <p class="eyebrow">Join TechMind</p>
+        <h1>从读者到作者，一站完成</h1>
+        <p class="lede">注册即可收藏、评论，并使用 AI 选题与智能导读。</p>
+      </div>
+      <p class="auth-foot">TechMind</p>
+    </aside>
+
+    <main class="auth-main">
+      <div class="auth-card">
+        <div class="auth-tabs">
+          <a href="login.html">登录</a>
+          <a class="on" href="register.html">注册</a>
+        </div>
+
+        <form id="registerForm" class="auth-form" novalidate>
+          <label class="field">
+            <span>用户名</span>
+            <input type="text" name="username" placeholder="2–16 个字符" required maxlength="16" autocomplete="username" />
+          </label>
+
+          <label class="field">
+            <span>邮箱</span>
+            <input type="email" name="email" placeholder="you@example.com" required autocomplete="email" />
+          </label>
+
+          <label class="field">
+            <span>密码</span>
+            <div class="field-row">
+              <input id="regPassword" type="password" name="password" placeholder="至少 8 位" required autocomplete="new-password" />
+              <button class="field-action" type="button" data-toggle-password="regPassword">显示</button>
+            </div>
+            <div class="pwd-meter" aria-hidden="true">
+              <i></i><i></i><i></i><i></i>
+            </div>
+            <small class="field-hint">建议包含字母与数字</small>
+          </label>
+
+          <label class="field">
+            <span>确认密码</span>
+            <input type="password" name="confirm" placeholder="再次输入密码" required autocomplete="new-password" />
+          </label>
+
+          <label class="field">
+            <span>你更常以什么身份使用？</span>
+            <div class="role-row">
+              <label class="role-chip"><input type="radio" name="role" value="reader" checked /><span>读者</span></label>
+              <label class="role-chip"><input type="radio" name="role" value="author" /><span>作者</span></label>
+              <label class="role-chip"><input type="radio" name="role" value="both" /><span>两者都有</span></label>
+            </div>
+          </label>
+
+          <label class="field">
+            <span>兴趣标签（至少选 1 个）</span>
+            <div class="tag-pick" id="registerTags"></div>
+            <small class="field-hint">帮助我们为你推荐更合适的内容</small>
+          </label>
+
+          <label class="field">
+            <span>一句话简介（可选）</span>
+            <input type="text" name="bio" placeholder="例如：后端 / 源码爱好者" maxlength="80" />
+          </label>
+
+          <label class="check auth-agree">
+            <input type="checkbox" required />
+            <span>我已阅读并同意 <button type="button" class="linkish" data-toast="用户协议">用户协议</button> 与 <button type="button" class="linkish" data-toast="隐私政策">隐私政策</button></span>
+          </label>
+
+          <button class="btn btn-primary auth-submit" type="submit">创建账号</button>
+        </form>
+
+        <p class="auth-switch">已有账号？<a href="login.html">去登录</a></p>
+      </div>
+    </main>
+  </div>
+  <script src="../js/store.js"></script>
+  <script src="../js/app.js"></script>
+</body>
+</html>

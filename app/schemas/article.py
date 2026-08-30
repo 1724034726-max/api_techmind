@@ -1,4 +1,4 @@
-# 文章 Schema（草稿 CRUD）
+# 文章 Schema（草稿 CRUD + 发布）
 from datetime import datetime
 from typing import Annotated
 
@@ -75,6 +75,45 @@ class UpdateArticleDTO(BaseModel):
     category: str | None = Field(default=None, max_length=CATEGORY_MAX)
     column_name: str | None = Field(default=None, max_length=COLUMN_NAME_MAX)
     cover_url: str | None = Field(default=None, max_length=COVER_URL_MAX)
+
+    @field_validator(
+        "title", "subtitle", "summary", "content_md", "column_name", "cover_url", "category",
+        mode="before",
+    )
+    @classmethod
+    def strip_text(cls, value: object) -> object:
+        return _strip_str(value)
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def strip_tags(cls, value: object) -> object:
+        if value is None or not isinstance(value, list):
+            return value
+        return [str(t).strip() for t in value if str(t).strip()]
+
+    @field_validator("category")
+    @classmethod
+    def category_whitelist(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        category = value or "后端"
+        if category not in ARTICLE_CATEGORIES:
+            raise ValueError(f"分类不合法，可选：{', '.join(ARTICLE_CATEGORIES)}")
+        return category
+
+
+class PublishArticleDTO(BaseModel):
+    """发布时可合并的元数据（均可选；空 body 用当前存盘内容）。"""
+
+    title: str | None = Field(default=None, max_length=TITLE_MAX)
+    subtitle: str | None = Field(default=None, max_length=SUBTITLE_MAX)
+    summary: str | None = Field(default=None, max_length=SUMMARY_MAX)
+    content_md: str | None = Field(default=None, max_length=CONTENT_MD_MAX)
+    tags: list[TagItem] | None = Field(default=None, max_length=TAGS_MAX)
+    category: str | None = Field(default=None, max_length=CATEGORY_MAX)
+    column_name: str | None = Field(default=None, max_length=COLUMN_NAME_MAX)
+    cover_url: str | None = Field(default=None, max_length=COVER_URL_MAX)
+    allow_comment: bool | None = Field(default=None)
 
     @field_validator(
         "title", "subtitle", "summary", "content_md", "column_name", "cover_url", "category",

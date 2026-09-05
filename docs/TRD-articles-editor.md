@@ -5,8 +5,8 @@
 | 文档类型 | Technical Requirements Document |
 | 范围 | `techmind-api` 文章主数据、作者草稿 CRUD、发布、写作助手 AI（火山方舟：选题/扩写 SSE；润色 JSON） |
 | 关联文档 | [TRD-architecture.md](./TRD-architecture.md)；前端 [techmind-web/docs/TRD-frontend-editor.md](../../techmind-web/docs/TRD-frontend-editor.md) |
-| 版本 | v0.3 |
-| 日期 | 2026-08-14 |
+| 版本 | v0.4 |
+| 日期 | 2026-09-05 |
 | 状态 | Draft（草稿 CRUD + 写作 AI 双模式已落地；发布未做） |
 
 > 全局响应信封、`ErrorCode`、JWT、雪花 ID、分层约定见架构 TRD。  
@@ -36,7 +36,7 @@
 
 ### 1.3 技术前提
 
-与架构 TRD 一致：FastAPI + SQLAlchemy 2 + PostgreSQL + Alembic + JWT Bearer + 雪花 ID。  
+与架构 TRD 一致：FastAPI + SQLAlchemy 2 + PostgreSQL + Alembic + JWT Cookie + 雪花 ID。  
 LLM：火山方舟 OpenAI 兼容 `chat/completions`（`app/integrations/ark`）。
 
 ---
@@ -216,7 +216,7 @@ published → archived（作者下架，可选）
 
 ## 5. API 设计
 
-统一：`ApiResponse[T]`；需登录接口带 `Authorization: Bearer`。  
+统一：`ApiResponse[T]`；需登录接口带 Cookie `tm_access_token`。  
 id 一律 **string**。
 
 ### 5.1 `POST /api/articles`
@@ -309,7 +309,7 @@ Body 同创建（全量或部分：建议 **PATCH 可选字段**）。
 | 项 | 约定 |
 |----|------|
 | 协议 | `POST` + `Content-Type: application/json` 请求体；响应 `Content-Type: text/event-stream` |
-| 鉴权 | Bearer；鉴权失败时仍可能返回**普通 JSON 信封**（非 SSE），由前端按 `apiFetch` 规则处理 |
+| 鉴权 | Cookie；鉴权失败时仍可能返回**普通 JSON 信封**（非 SSE），由前端按 `apiFetch` 规则处理 |
 | 上游 | 火山方舟 `chat/completions`，`stream: true`；客户端 `app/integrations/ark` |
 | 未配置 | 流内 `event: error`，`code=err41200001`（`ERR_AI_NOT_CONFIGURED`）；或启动前校验失败同码 |
 | 缓冲 | 响应头建议：`Cache-Control: no-cache`、`Connection: keep-alive`、`X-Accel-Buffering: no` |

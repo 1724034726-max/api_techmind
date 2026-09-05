@@ -58,7 +58,8 @@ uvicorn app.main:app --reload --port 8000
 |------|------|------|
 | `POST` | `/api/auth/register` | 注册（成功即登录） |
 | `POST` | `/api/auth/login` | 登录 |
-| `GET` | `/api/auth/me` | 当前用户（Header: `Authorization: Bearer <token>`） |
+| `POST` | `/api/auth/logout` | 登出（清 Cookie） |
+| `GET` | `/api/auth/me` | 当前用户（Cookie `tm_access_token`） |
 
 ## 常用命令
 

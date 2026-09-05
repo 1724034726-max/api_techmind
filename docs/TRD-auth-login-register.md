@@ -5,8 +5,8 @@
 | 文档类型 | Technical Requirements Document |
 | 范围 | `techmind-api` 用户与认证子系统 |
 | 关联文档 | [TRD-architecture.md](./TRD-architecture.md)（整体架构与全局约定） |
-| 版本 | v0.4 |
-| 日期 | 2026-08-12 |
+| 版本 | v0.5 |
+| 日期 | 2026-09-05 |
 | 状态 | Draft |
 
 ---
@@ -19,7 +19,7 @@
 
 1. 用户注册（落库 + 密码哈希）
 2. 用户登录（校验 + 签发访问令牌）
-3. 基于 Bearer Token 的当前用户解析（`/me`）
+3. 基于 Cookie 的当前用户解析（`/me`）；登录/注册写 Cookie，登出清 Cookie
 4. 与现有基建对齐：统一响应 `ApiResponse`、错误码 `ErrorCode`、全局异常过滤器
 
 ### 1.2 非目标
@@ -48,8 +48,8 @@
 
 ```
 Client
-  │  POST /api/auth/register | login
-  │  GET  /api/auth/me   (Authorization: Bearer)
+  │  POST /api/auth/register | login | logout
+  │  GET  /api/auth/me   (Cookie tm_access_token)
   ▼
 Controller (auth)
   │  参数校验 / 调 Service / 包装 ApiResponse
@@ -253,7 +253,13 @@ CREATE INDEX idx_users_status ON users (status);
 | `role` | 可选 |
 | `iat` / `exp` | 标准时间戳 |
 
-**Header**：`Authorization: Bearer <access_token>`
+**浏览器会话**：登录/注册成功时 `Set-Cookie`：
+
+| 项 | 约定 |
+|----|------|
+| 名 | `tm_access_token` |
+| 属性 | `HttpOnly`、`Path=/`、`SameSite=None`、`Secure`（`COOKIE_SECURE`，默认 `true`） |
+| 寿命 | `Max-Age` = `expires_in` |
 
 **过期时间**
 
@@ -265,7 +271,7 @@ CREATE INDEX idx_users_status ON users (status);
 
 ### 4.4 当前用户
 
-1. 解析 Bearer；缺失/非法 → `ERR_UNAUTHORIZED` 或 `ERR_TOKEN_INVALID`。
+1. 读取 Cookie `tm_access_token`；缺失/非法 → `ERR_UNAUTHORIZED` 或 `ERR_TOKEN_INVALID`。
 2. 过期 → `ERR_TOKEN_EXPIRED`。
 3. 按 `sub` 查库；用户不存在或已禁用 → `ERR_UNAUTHORIZED` / `ERR_FORBIDDEN`。
 4. 返回公开用户 VO（`UserVO`）。
@@ -385,7 +391,8 @@ Base：`/api/auth`
 
 > 对外 DTO 可用 `followers` / `following` 映射库字段 `followers_count` / `following_count`。  
 > **禁止**返回 `password` / `password_hash`。  
-> `theme` 默认 `light`；未登录前端固定浅色，不跟系统。
+> `theme` 默认 `light`；未登录前端固定浅色，不跟系统。  
+> 同时写入 Cookie `tm_access_token`（见 §4.3）。
 
 ### 5.2 `POST /api/auth/login`
 
@@ -403,16 +410,21 @@ Base：`/api/auth`
 | `account` | 是 | 用户名或邮箱 |
 | `password` | 是 | 明文密码，仅传输不落库 |
 
-**Response 200**：与注册成功 `data` 结构相同。
+**Response 200**：与注册成功 `data` 结构相同；同样写入 Cookie。
 
-### 5.3 `GET /api/auth/me`
+### 5.3 `POST /api/auth/logout`
 
-Header：`Authorization: Bearer <token>`  
+清除 Cookie `tm_access_token`。无需登录。  
+**Response 200**：`data` 为 `null`。
+
+### 5.4 `GET /api/auth/me`
+
+Cookie `tm_access_token`。  
 **Response 200**：`data` 为 `user` 对象（无 token 字段，含 `theme`）。
 
-### 5.4 `PATCH /api/users/me/theme`
+### 5.5 `PATCH /api/users/me/theme`
 
-Header：`Authorization: Bearer <token>`
+Cookie `tm_access_token`。
 
 **Request**
 
@@ -426,12 +438,12 @@ Header：`Authorization: Bearer <token>`
 
 **Response 200**：`data` 为更新后的 `UserVO`。
 
-### 5.5 错误码（复用 / 建议增补）
+### 5.6 错误码（复用 / 建议增补）
 
 | ErrorCode | code | 场景 |
 |-----------|------|------|
 | `ERR_VALIDATION` | `err10000002` | 入参校验失败 |
-| `ERR_UNAUTHORIZED` | `err10000003` | 未带 token / 无法识别身份 |
+| `ERR_UNAUTHORIZED` | `err10000003` | 未带 Cookie / 无法识别身份 |
 | `ERR_FORBIDDEN` | `err10000004` | 账号禁用等 |
 | `ERR_ACCOUNT_NOT_FOUND` | `err21234333` | 登录账号不存在 |
 | `ERR_PASSWORD_WRONG` | `err21234334` | 密码错误 |
@@ -450,11 +462,11 @@ Header：`Authorization: Bearer <token>`
 | 层级 | 文件 | 内容 |
 |------|------|------|
 | 常量 | `app/core/constants.py` | `UserRole` / `UserStatus` / `ThemePreference` |
-| 安全 | `app/core/security.py` | hash / verify / create_token / decode_token |
+| 安全 | `app/core/security.py`、`auth_cookie.py` | hash / JWT；Cookie 读写 |
 | 敏感词 | `app/core/sensitive.py` | AC 自动机检测；`first_sensitive_in_tags` |
 | 词库 | `data/sensitive_words.txt` | 敏感词列表（运营可维护） |
 | 雪花 | `app/core/snowflake.py` | 雪花 ID 生成器（worker/datacenter 可配置） |
-| 配置 | `app/config.py` | `SECRET_KEY`、JWT 过期时间、算法、雪花 worker 配置 |
+| 配置 | `app/config.py` | `SECRET_KEY`、JWT、`COOKIE_SECURE`、雪花 worker |
 | Model | `app/models/base.py`、`user.py` | Declarative Base + User（含 `theme`） |
 | Schema | `app/schemas/auth.py`、`user.py` | Register/Login、`UpdateThemeDTO`、UserVO |
 | Repo | `app/repositories/user_repo.py` | create / update_login / update_theme … |
@@ -475,6 +487,7 @@ Header：`Authorization: Bearer <token>`
 | `SECRET_KEY` | 是 | JWT 签名 |
 | `JWT_ALGORITHM` | 否 | 默认 `HS256` |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | 否 | 默认 `1440`（统一过期；与「记住我」无关） |
+| `COOKIE_SECURE` | 否 | 默认 `true`（Cookie `Secure`） |
 | `SNOWFLAKE_WORKER_ID` | 否 | 默认 `1`（0–31） |
 | `SNOWFLAKE_DATACENTER_ID` | 否 | 默认 `1`（0–31） |
 
@@ -494,7 +507,7 @@ Header：`Authorization: Bearer <token>`
 1. 迁移可重复执行，`users` 表结构与第 3.3 节一致（含唯一约束与 check）。
 2. 注册成功写入哈希而非明文；重复 username/email 返回 `err21234335`。
 3. 登录支持 username 或 email；错误码区分不存在 / 密码错误。
-4. JWT 可被 `/me` 解析；过期与非法 token 返回对应错误码。
+4. Cookie 可被 `/me` 解析；过期与非法 token 返回对应错误码。登录/注册写 Cookie；`/logout` 清 Cookie。
 5. 所有接口响应为 `{code,message,data}`；业务错误只通过 `ErrorCode`。
 6. 响应体永不包含 `password` / `password_hash`。
 7. JWT 过期时间符合 `ACCESS_TOKEN_EXPIRE_MINUTES` 单一配置。

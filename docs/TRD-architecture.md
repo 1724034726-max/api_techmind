@@ -5,8 +5,8 @@
 | 文档类型 | Technical Requirements Document |
 | 范围 | `techmind-api` 工程架构、分层、全局基建与跨模块约定 |
 | 关联文档 | [TRD-auth-login-register.md](./TRD-auth-login-register.md)（认证）、[TRD-articles-editor.md](./TRD-articles-editor.md)（文章与写作） |
-| 版本 | v1.3 |
-| 日期 | 2026-08-14 |
+| 版本 | v1.4 |
+| 日期 | 2026-09-05 |
 | 状态 | Draft |
 
 ---
@@ -219,6 +219,7 @@ raise AppException(ErrorCode.ERR_PASSWORD_WRONG, http_status=400)
 | `SECRET_KEY` | JWT 签名 |
 | `JWT_ALGORITHM` | 默认 `HS256` |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Access Token 过期（分钟） |
+| `COOKIE_SECURE` | Cookie `Secure`（默认 `true`） |
 | `SNOWFLAKE_WORKER_ID` | 雪花机器号 |
 | `SNOWFLAKE_DATACENTER_ID` | 雪花数据中心号 |
 | `ARK_API_KEY` | 火山方舟密钥（写作 AI）；空则 AI 不可用 |
@@ -279,8 +280,8 @@ raise AppException(ErrorCode.ERR_PASSWORD_WRONG, http_status=400)
 
 - 位置：`app/core/security.py`
 - 密码：bcrypt 哈希存储，禁止明文落库或回传
-- JWT：`Authorization: Bearer <token>`；claims 含 `sub`（用户 id 字符串）等
-- 当前用户：`deps.get_current_user` / `CurrentUser`
+- JWT：Cookie `tm_access_token`（HttpOnly）；claims 含 `sub`（用户 id 字符串）等
+- Cookie 读写：`app/core/auth_cookie.py`；当前用户：`deps.get_current_user` / `CurrentUser`
 
 ### 10.3 常量
 

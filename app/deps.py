@@ -1,10 +1,10 @@
 # FastAPI 公共依赖（数据库会话、当前用户等）
 from typing import Annotated
 
-from fastapi import Depends
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import Cookie, Depends
 from sqlalchemy.orm import Session
 
+from app.core.auth_cookie import ACCESS_TOKEN_COOKIE
 from app.core.constants import UserStatus
 from app.core.error_codes import ErrorCode
 from app.core.exceptions import exception
@@ -13,22 +13,18 @@ from app.db.session import get_db
 from app.models.user import User
 from app.repositories import user_repo
 
-# Bearer 鉴权方案（不自动抛 403，便于转业务错误码）
-_bearer = HTTPBearer(auto_error=False)
-
 DbSession = Annotated[Session, Depends(get_db)]
 
 
 def get_current_user(
     db: DbSession,
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
+    access_token_cookie: Annotated[str | None, Cookie(alias=ACCESS_TOKEN_COOKIE)] = None,
 ) -> User:
-    # 校验 Authorization Bearer
-    if credentials is None or credentials.scheme.lower() != "bearer":
+    if not access_token_cookie:
         raise exception(ErrorCode.ERR_UNAUTHORIZED, http_status=401)
 
     # 解析 JWT
-    payload = decode_access_token(credentials.credentials)
+    payload = decode_access_token(access_token_cookie)
     sub = payload.get("sub")
     if not sub:
         raise exception(ErrorCode.ERR_TOKEN_INVALID, http_status=401)

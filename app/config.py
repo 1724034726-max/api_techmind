@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     secret_key: str
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440
+    # 跨站 Cookie 需 Secure；本地 http://localhost 亦可用 True（Chromium）
+    cookie_secure: bool = True
 
     # 雪花
     snowflake_worker_id: int = 1

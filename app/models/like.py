@@ -1,23 +1,21 @@
-# 收藏关系
+# 点赞关系
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Index, String, func
+from sqlalchemy import BigInteger, DateTime, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
 
 
-class Favorite(Base):
-    """用户收藏的文章，folder 为夹名。"""
+class ArticleLike(Base):
+    """用户对文章的点赞。"""
 
-    __tablename__ = "favorites"
-    __table_args__ = (Index("idx_favorites_user_folder", "user_id", "folder"),)
+    __tablename__ = "article_likes"
 
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), primary_key=True)
     article_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("articles.id"), primary_key=True
     )
-    folder: Mapped[str] = mapped_column(String(32), nullable=False, default="默认", server_default="默认")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

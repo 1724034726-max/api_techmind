@@ -5,6 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.article import Article
+from app.models.user import User
 
 
 def get_by_id(db: Session, article_id: int) -> Article | None:
@@ -44,6 +45,34 @@ def list_by_author(
     )
     items = list(db.scalars(stmt).all())
     return items, total
+
+
+def list_published(
+    db: Session,
+    *,
+    limit: int = 20,
+    offset: int = 0,
+    author_id: int | None = None,
+    column_name: str | None = None,
+) -> tuple[list[tuple[Article, str]], int]:
+    # 已发布列表（含作者名）+ 总数
+    filters = [Article.status == "published"]
+    if author_id is not None:
+        filters.append(Article.author_id == author_id)
+    if column_name:
+        filters.append(Article.column_name == column_name)
+    count_stmt = select(func.count()).select_from(Article).where(*filters)
+    total = int(db.scalar(count_stmt) or 0)
+    stmt = (
+        select(Article, User.username)
+        .join(User, User.id == Article.author_id)
+        .where(*filters)
+        .order_by(Article.published_at.desc().nulls_last(), Article.updated_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    rows = list(db.execute(stmt).all())
+    return [(row[0], row[1]) for row in rows], total
 
 
 def touch_updated(db: Session, article: Article) -> Article:

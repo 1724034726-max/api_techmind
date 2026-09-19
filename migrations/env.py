@@ -8,6 +8,11 @@ from app.config import get_settings
 from app.models import Base
 
 # 导入全部模型，确保 metadata 完整
+import app.models.article  # noqa: F401
+import app.models.comment  # noqa: F401
+import app.models.favorite  # noqa: F401
+import app.models.like  # noqa: F401
+import app.models.topic  # noqa: F401
 import app.models.user  # noqa: F401
 
 config = context.config

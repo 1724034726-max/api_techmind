@@ -258,7 +258,7 @@ CREATE INDEX idx_users_status ON users (status);
 | 项 | 约定 |
 |----|------|
 | 名 | `tm_access_token` |
-| 属性 | `HttpOnly`、`Path=/`、`SameSite=None`、`Secure`（`COOKIE_SECURE`，默认 `true`） |
+| 属性 | `HttpOnly`、`Path=/`、`SameSite=None`、`Secure`（`COOKIE_SECURE`，默认 `true`）、`Domain`（`COOKIE_DOMAIN`，空则仅 API 主机） |
 | 寿命 | `Max-Age` = `expires_in` |
 
 **过期时间**
@@ -488,6 +488,7 @@ Cookie `tm_access_token`。
 | `JWT_ALGORITHM` | 否 | 默认 `HS256` |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | 否 | 默认 `1440`（统一过期；与「记住我」无关） |
 | `COOKIE_SECURE` | 否 | 默认 `true`（Cookie `Secure`） |
+| `COOKIE_DOMAIN` | 否 | 空则仅 API 主机；`localhost` 或 `.example.com` 时前后端可共用 |
 | `SNOWFLAKE_WORKER_ID` | 否 | 默认 `1`（0–31） |
 | `SNOWFLAKE_DATACENTER_ID` | 否 | 默认 `1`（0–31） |
 

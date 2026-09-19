@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 1440
     # 跨站 Cookie 需 Secure；本地 http://localhost 亦可用 True（Chromium）
     cookie_secure: bool = True
+    # 空则仅当前主机；localhost 或 .example.com 时可让 Next 与 API 共用
+    cookie_domain: str = ""
 
     # 雪花
     snowflake_worker_id: int = 1

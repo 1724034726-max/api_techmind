@@ -6,6 +6,8 @@ from app.config import get_settings
 from app.controllers.articles import router as articles_router
 from app.controllers.auth import router as auth_router
 from app.controllers.editor import router as editor_router
+from app.controllers.favorites import router as favorites_router
+from app.controllers.topics import router as topics_router
 from app.controllers.users import router as users_router
 from app.core.exception_handlers import register_exception_handlers
 
@@ -28,4 +30,6 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api/auth")
 app.include_router(users_router, prefix="/api/users")
 app.include_router(articles_router, prefix="/api/articles")
+app.include_router(favorites_router, prefix="/api/favorites")
+app.include_router(topics_router, prefix="/api/topics")
 app.include_router(editor_router, prefix="/api/editor")

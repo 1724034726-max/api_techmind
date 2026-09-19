@@ -220,6 +220,7 @@ raise AppException(ErrorCode.ERR_PASSWORD_WRONG, http_status=400)
 | `JWT_ALGORITHM` | 默认 `HS256` |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Access Token 过期（分钟） |
 | `COOKIE_SECURE` | Cookie `Secure`（默认 `true`） |
+| `COOKIE_DOMAIN` | Cookie `Domain`；空则仅 API 主机 |
 | `SNOWFLAKE_WORKER_ID` | 雪花机器号 |
 | `SNOWFLAKE_DATACENTER_ID` | 雪花数据中心号 |
 | `ARK_API_KEY` | 火山方舟密钥（写作 AI）；空则 AI 不可用 |

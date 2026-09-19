@@ -11,7 +11,8 @@ from app.core.sensitive import find_sensitive, first_sensitive_in_tags
 from app.core.snowflake import next_id
 from app.models.article import Article
 from app.models.user import User
-from app.repositories import article_repo
+from app.repositories import article_repo, user_repo
+from app.services import engagement_service
 from app.schemas.article import (
     SUMMARY_MAX,
     ArticleListItemVO,
@@ -35,17 +36,33 @@ def _to_vo(article: Article, author_name: str = "") -> ArticleVO:
     )
 
 
-def _get_owned_draft(db: Session, user: User, article_id: int) -> Article:
-    # 按 id 取文并校验归属与草稿态
+def _get_owned(db: Session, user: User, article_id: int) -> Article:
+    # 按 id 取文并校验归属
     article = article_repo.get_by_id(db, article_id)
-    if not article:
+    if not article or article.author_id != user.id:
         raise exception(ErrorCode.ERR_ARTICLE_NOT_FOUND, http_status=404)
-    if article.author_id != user.id:
-        # 防枚举：非作者统一当不存在
-        raise exception(ErrorCode.ERR_ARTICLE_NOT_FOUND, http_status=404)
+    return article
+
+
+def _get_owned_draft(db: Session, user: User, article_id: int) -> Article:
+    # 归属校验后再要求草稿态
+    article = _get_owned(db, user, article_id)
     if article.status != ArticleStatus.DRAFT.value:
         raise exception(ErrorCode.ERR_ARTICLE_STATUS, http_status=400)
     return article
+
+
+def _get_owned_editable(db: Session, user: User, article_id: int) -> Article:
+    # 草稿或已发布可改；已下架不可
+    article = _get_owned(db, user, article_id)
+    if article.status == ArticleStatus.ARCHIVED.value:
+        raise exception(ErrorCode.ERR_ARTICLE_STATUS, http_status=400)
+    return article
+
+
+def _author_name(db: Session, author_id: int) -> str:
+    author = user_repo.get_by_id(db, author_id)
+    return author.username if author else ""
 
 
 def _apply_fields(article: Article, data: dict) -> None:
@@ -116,7 +133,7 @@ def update_draft(
     db: Session, user: User, article_id: int, payload: UpdateArticleDTO
 ) -> ArticleVO:
     _ensure_can_write(user)
-    article = _get_owned_draft(db, user, article_id)
+    article = _get_owned_editable(db, user, article_id)
 
     # 按传入字段局部更新
     _apply_fields(article, payload.model_dump(exclude_unset=True))
@@ -135,28 +152,33 @@ def update_draft(
     return _to_vo(fresh, user.username)
 
 
-def get_draft(db: Session, user: User, article_id: int) -> ArticleVO:
-    _ensure_can_write(user)
-    article = _get_owned_draft(db, user, article_id)
-    return _to_vo(article, user.username)
+def get_article(db: Session, user: User, article_id: int) -> ArticleVO:
+    # 已发布谁都能读；其余仅作者
+    article = article_repo.get_by_id(db, article_id)
+    if not article:
+        raise exception(ErrorCode.ERR_ARTICLE_NOT_FOUND, http_status=404)
+    if article.status != ArticleStatus.PUBLISHED.value and article.author_id != user.id:
+        raise exception(ErrorCode.ERR_ARTICLE_NOT_FOUND, http_status=404)
+    vo = _to_vo(article, _author_name(db, article.author_id))
+    flags = engagement_service.state(db, user, article.id)
+    return vo.model_copy(update=flags.model_dump())
 
 
-def list_my_drafts(
+def list_my_articles(
     db: Session,
     user: User,
     *,
+    status: str | None = None,
     limit: int = 20,
     offset: int = 0,
 ) -> ArticleListVO:
-    _ensure_can_write(user)
     limit = max(1, min(limit, 50))
     offset = max(0, offset)
 
-    # 只列当前用户草稿
     items, total = article_repo.list_by_author(
         db,
         user.id,
-        status=ArticleStatus.DRAFT.value,
+        status=status,
         limit=limit,
         offset=offset,
     )
@@ -166,13 +188,45 @@ def list_my_drafts(
     )
 
 
-def delete_draft(db: Session, user: User, article_id: int) -> None:
-    _ensure_can_write(user)
-    article = _get_owned_draft(db, user, article_id)
+def list_published(
+    db: Session,
+    *,
+    limit: int = 20,
+    offset: int = 0,
+    author_id: int | None = None,
+    column_name: str | None = None,
+) -> ArticleListVO:
+    limit = max(1, min(limit, 50))
+    offset = max(0, offset)
+    rows, total = article_repo.list_published(
+        db,
+        limit=limit,
+        offset=offset,
+        author_id=author_id,
+        column_name=column_name,
+    )
+    items = [
+        ArticleListItemVO.model_validate(article).model_copy(
+            update={"author_name": name}
+        )
+        for article, name in rows
+    ]
+    return ArticleListVO(items=items, total=total)
 
-    # 硬删草稿
+
+def delete_article(db: Session, user: User, article_id: int) -> None:
+    # 草稿硬删；已发布改为下架
+    _ensure_can_write(user)
+    article = _get_owned(db, user, article_id)
+    if article.status == ArticleStatus.ARCHIVED.value:
+        raise exception(ErrorCode.ERR_ARTICLE_STATUS, http_status=400)
+
     try:
-        article_repo.delete(db, article)
+        if article.status == ArticleStatus.DRAFT.value:
+            article_repo.delete(db, article)
+        else:
+            article.status = ArticleStatus.ARCHIVED.value
+            article_repo.touch_updated(db, article)
         db.commit()
     except IntegrityError as exc:
         db.rollback()

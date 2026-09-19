@@ -163,6 +163,10 @@ class ArticleVO(BaseModel):
     published_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+    like_count: int = 0
+    liked: bool = False
+    favorited: bool = False
+    favorite_folder: str = ""
 
     @field_serializer("id", "author_id")
     def serialize_ids(self, value: int) -> str:
@@ -182,6 +186,8 @@ class ArticleListItemVO(BaseModel):
     tags: list[str] = Field(default_factory=list)
     category: str
     status: ArticleStatus
+    author_name: str = ""
+    published_at: datetime | None = None
     updated_at: datetime
     created_at: datetime
 

@@ -29,6 +29,9 @@ class ErrorCode(Enum):
     ERR_ARTICLE_NOT_AUTHOR = ("err31200004", "无权操作该文章")
     ERR_ARTICLE_STATUS = ("err31200005", "当前状态不允许该操作")
     ERR_ARTICLE_SAVE_FAILED = ("err31200006", "文章保存失败，请稍后重试")
+    ERR_COMMENT_CLOSED = ("err31200007", "该文章未开放评论")
+    ERR_COMMENT_NOT_FOUND = ("err31200008", "评论不存在")
+    ERR_TOPIC_NOT_FOUND = ("err31200009", "专题不存在")
 
     # —— 写作 AI ——
     ERR_AI_NOT_CONFIGURED = ("err41200001", "写作助手未配置，请联系管理员")

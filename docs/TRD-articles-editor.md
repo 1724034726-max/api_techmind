@@ -5,9 +5,9 @@
 | 文档类型 | Technical Requirements Document |
 | 范围 | `techmind-api` 文章主数据、作者草稿 CRUD、发布、写作助手 AI（火山方舟：选题/扩写 SSE；润色 JSON） |
 | 关联文档 | [TRD-architecture.md](./TRD-architecture.md)；前端 [techmind-web/docs/TRD-frontend-editor.md](../../techmind-web/docs/TRD-frontend-editor.md) |
-| 版本 | v0.4 |
-| 日期 | 2026-09-05 |
-| 状态 | Draft（草稿 CRUD + 写作 AI 双模式已落地；发布未做） |
+| 版本 | v0.5 |
+| 日期 | 2026-09-19 |
+| 状态 | Draft（草稿 CRUD、发布、已发布列表/详情、下架、写作 AI 已落地） |
 
 > 全局响应信封、`ErrorCode`、JWT、雪花 ID、分层约定见架构 TRD。  
 > 本文与前端编辑器 TRD 对齐：**正文唯一源格式为 Markdown（`content_md`）**；不存 HTML 为主源。
@@ -26,13 +26,13 @@
 
 ### 1.2 非目标（本迭代）
 
-- **发布**（`POST .../publish`）、定时发布、审核流水线
+- 定时发布、审核流水线（发布后 `review_status=pending`，列表仍按 `published` 展示）
 - 向量 Embedding / 语义检索
 - 版本历史表、协作编辑、富文本 / MDX
-- 专栏 / 分类独立 CRUD 完整化
+- 专栏 / 分类独立 CRUD
 - 图片上传 OSS
 
-> 当前已实现：**草稿**创建 / 更新 / 我的列表 / 详情 / 删除；**写作 AI** 选题/扩写 SSE + 润色 JSON。
+> 已实现：草稿 CRUD；`POST .../publish`；`GET /api/articles` 已发布列表；详情（已发布可读，草稿/下架仅作者）；已发布可 PATCH；`DELETE` 对已发布改为 `archived`；写作 AI。
 
 ### 1.3 技术前提
 
@@ -241,6 +241,14 @@ id 一律 **string**。
 字段均可选；缺省按表默认。  
 **Response 201**：`ArticleVO`（含 `status: "draft"`）。
 
+### 5.1.1 `GET /api/articles`
+
+已发布列表，按 `published_at` 倒序。需登录。不含 `content_md`。
+
+**Query**：`limit`（默认 20，最大 50）、`offset`（默认 0）。
+
+**Response 200**：`ArticleListVO`（`items` + `total`）。列表项含 `author_name`、`published_at`。
+
 ### 5.2 `PATCH /api/articles/{id}`
 
 更新草稿或已发布文（仅作者）。  
@@ -255,9 +263,9 @@ Body 同创建（全量或部分：建议 **PATCH 可选字段**）。
 
 | 参数 | 说明 |
 |------|------|
-| `status` | 可选：`draft` / `published` / `archived` / 不传=全部 |
+| `status` | 默认 `draft`。`draft` / `published` / `archived` |
 | `limit` | 默认 20，最大 50 |
-| `cursor` | 可选，后续游标；首版可用 `offset` |
+| `offset` | 默认 0 |
 
 **Response 200**：`{ "items": ArticleVO[], "total": number }`（或纯 list，实现时与项目列表风格统一）。
 
@@ -293,7 +301,7 @@ Body 同创建（全量或部分：建议 **PATCH 可选字段**）。
 ### 5.6 `DELETE /api/articles/{id}`
 
 - `draft`：硬删。  
-- `published`：本迭代改为 `archived`（推荐）或拒绝删除。
+- `published`：改为 `archived`（不硬删）。
 
 ### 5.7 写作 AI（`/api/editor`，双模式）
 
@@ -471,11 +479,13 @@ Body 同创建（全量或部分：建议 **PATCH 可选字段**）。
 | 前端（编辑器 TRD） | 后端 |
 |--------------------|------|
 | 服务端草稿 | `GET/POST/PATCH/DELETE /api/articles`，`status=draft` |
-| 导读空则发布时生成 | **服务端必须再兜底一遍**（防绕过；发布未做） |
+| 导读空则发布时生成 | 服务端在 `publish` 时生成 |
 | 正文 MD | `content_md` |
 | AI | 选题/扩写 SSE → `apiSseFetch`；润色 JSON → `apiFetch` |
-| 发布经 Sheet | `POST /api/articles/{id}/publish`（未做） |
+| 发布经 Sheet | `POST /api/articles/{id}/publish` |
+| 首页列表 | `GET /api/articles` |
 | 详情渲染 MD | `GET /api/articles/{id}` → 前端 `react-markdown` |
+| 我的 | `GET /api/articles/mine?status=` |
 
 ---
 
@@ -486,8 +496,8 @@ Body 同创建（全量或部分：建议 **PATCH 可选字段**）。
 | 1 | 迁移后 `articles` 表存在，CHECK / 索引齐全 |
 | 2 | 作者可建草稿、更新、列表、删除；读者角色创建失败 |
 | 3 | 非作者不可读他人草稿（表现为不存在或无权限） |
-| 4 | 发布：无标题失败；无摘要自动生成并落库；`status=published`（待做） |
-| 5 | 已发布详情返回 `content_md`；id 为字符串（待发布后） |
+| 4 | 发布：无标题失败；无摘要自动生成并落库；`status=published` |
+| 5 | 已发布列表与详情返回；详情含 `content_md`；id 为字符串；非作者读不到草稿 |
 | 6 | AI：选题/扩写 SSE；导读/开头一次性 JSON；配置 Key 后可联调方舟 |
 | 7 | 敏感词命中返回既有/扩展错误码 |
 | 8 | 非流式接口响应均为 `ApiResponse`；SSE 业务失败在流内 `error` |
@@ -509,7 +519,7 @@ Body 同创建（全量或部分：建议 **PATCH 可选字段**）。
 
 | 项 | 默认 |
 |----|------|
-| 发布后 `review_status` | `pending`（Feed 可先只展示 `approved`，或本阶段 `published` 即可见） |
+| 发布后 `review_status` | `pending`；列表只看 `status=published`，不按审核过滤 |
 | 已发布是否允许改正文 | 允许（简单）；若要审核回流再改 |
 | 专栏 | 先 `column_name` 字符串 |
 | 列表是否返回全文 | 否，仅详情 |
